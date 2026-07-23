@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.product.mapper.ProductMapper">
+
+    <resultMap id="ProductMap" type="com.campus.product.entity.Product">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="price" column="price"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="sellerId" column="seller_id"/>
+        <result property="contactInfo" column="contact_info"/>
+        <result property="status" column="status"/>
+        <result property="rejectReason" column="reject_reason"/>
+        <result property="deleted" column="is_deleted"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="sellerUsername" column="seller_username"/>
+        <result property="firstImage" column="first_image"/>
+        <result property="appointmentCount" column="appointment_count"/>
+    </resultMap>
+
+    <select id="findById" resultMap="ProductMap">
+        SELECT p.id, p.title, p.description, p.price, p.category_id, p.seller_id, p.contact_info,
+               p.status, p.reject_reason, p.is_deleted, p.created_at, p.updated_at,
+               c.name AS category_name, u.username AS seller_username
+        FROM products p
+        JOIN categories c ON c.id = p.category_id
+        JOIN users u ON u.id = p.seller_id
+        WHERE p.id = #{id} AND p.is_deleted = FALSE
+    </select>
+
+    <select id="findActive" resultMap="ProductMap">
+        SELECT p.id, p.title, p.price, p.created_at, c.name AS category_name,
+               (SELECT pi.image FROM product_images pi
+                WHERE pi.product_id = p.id AND pi.is_deleted = FALSE
+                ORDER BY pi.id ASC LIMIT 1) AS first_image
+        FROM products p
+        JOIN categories c ON c.id = p.category_id
+        WHERE p.is_deleted = FALSE AND p.status = 'active'
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        <if test="search != null and search != ''">
+            AND (p.title LIKE CONCAT('%', #{search}, '%') OR p.description LIKE CONCAT('%', #{search}, '%'))
+        </if>
+        ORDER BY p.created_at DESC
+    </select>
+
+    <select id="findBySeller" resultMap="ProductMap">
+        SELECT p.id, p.title, p.price, p.status, p.created_at, c.name AS category_name,
+               (SELECT COUNT(*) FROM appointments a WHERE a.product_id = p.id) AS appointment_count
+        FROM products p
+        JOIN categories c ON c.id = p.category_id
+        WHERE p.is_deleted = FALSE AND p.seller_id = #{sellerId}
+        <if test="status != null and status != ''">
+            AND p.status = #{status}
+        </if>
+        ORDER BY p.created_at DESC
+    </select>
+
+    <select id="findPending" resultMap="ProductMap">
+        SELECT p.id, p.title, p.price, p.created_at, c.name AS category_name,
+               (SELECT pi.image FROM product_images pi
+                WHERE pi.product_id = p.id AND pi.is_deleted = FALSE
+                ORDER BY pi.id ASC LIMIT 1) AS first_image
+        FROM products p
+        JOIN categories c ON c.id = p.category_id
+        WHERE p.is_deleted = FALSE AND p.status = 'pending'
+        ORDER BY p.created_at ASC
+    </select>
+</mapper>

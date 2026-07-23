@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="${product.title} + ' - CAMPUS_SHARE'">详情</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+<header class="border-b bg-white sticky top-0 z-20">
+    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        <a href="/" class="font-bold text-lg text-emerald-700">CAMPUS_SHARE</a>
+        <a href="/products" class="text-sm">返回列表</a>
+    </div>
+</header>
+<main class="max-w-6xl mx-auto px-4 py-8 grid md:grid-cols-2 gap-8">
+    <div>
+        <div class="bg-white rounded-xl border overflow-hidden aspect-square">
+            <img th:if="${!#lists.isEmpty(product.images)}" th:src="${product.images[0].image}" class="w-full h-full object-cover" alt=""/>
+        </div>
+        <div class="flex gap-2 mt-3" th:if="${product.images != null and #lists.size(product.images) > 1}">
+            <img th:each="img : ${product.images}" th:src="${img.image}" class="w-16 h-16 object-cover rounded border" alt=""/>
+        </div>
+    </div>
+    <div>
+        <div th:if="${message}" class="mb-3 rounded bg-emerald-50 text-emerald-800 px-3 py-2" th:text="${message}"></div>
+        <div th:if="${error}" class="mb-3 rounded bg-rose-50 text-rose-800 px-3 py-2" th:text="${error}"></div>
+        <h1 class="text-2xl font-bold mb-2" th:text="${product.title}"></h1>
+        <p class="text-3xl text-emerald-700 font-semibold mb-4">¥<span th:text="${product.price}"></span></p>
+        <p class="text-sm text-slate-500 mb-1">分类：<span th:text="${product.category_name}"></span></p>
+        <p class="text-sm text-slate-500 mb-1">卖家：<span th:text="${product.seller_username}"></span></p>
+        <p class="text-sm text-slate-500 mb-4">联系：<span th:text="${product.contact_info}"></span></p>
+        <p class="whitespace-pre-wrap mb-6" th:text="${product.description}"></p>
+        <div class="flex flex-wrap gap-3" sec:authorize="isAuthenticated()">
+            <form th:action="@{/products/{id}/favorite(id=${product.id})}" method="post">
+                <button class="px-4 py-2 border rounded-lg" th:text="${product.is_favorited} ? '取消收藏' : '收藏'">收藏</button>
+            </form>
+            <form th:action="@{/products/{id}/appoint(id=${product.id})}" method="post">
+                <button class="px-4 py-2 bg-emerald-700 text-white rounded-lg"
+                        th:disabled="${product.is_appointed}"
+                        th:text="${product.is_appointed} ? '已预约' : '预约'">预约</button>
+            </form>
+        </div>
+        <div class="mt-10">
+            <h2 class="font-semibold mb-3">留言</h2>
+            <div class="space-y-3 mb-4">
+                <div th:each="c : ${product.comments}" class="bg-white border rounded-lg p-3">
+                    <p class="text-sm font-medium" th:text="${c.username}"></p>
+                    <p th:text="${c.content}"></p>
+                </div>
+                <p th:if="${#lists.isEmpty(product.comments)}" class="text-slate-500 text-sm">暂无留言</p>
+            </div>
+            <form th:action="@{/products/{id}/comment(id=${product.id})}" method="post" sec:authorize="isAuthenticated()" class="flex gap-2">
+                <input name="content" required maxlength="500" class="flex-1 border rounded-lg px-3 py-2" placeholder="说点什么..."/>
+                <button class="px-4 py-2 bg-slate-800 text-white rounded-lg">发送</button>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

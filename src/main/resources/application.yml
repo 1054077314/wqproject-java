@@ -1,0 +1,43 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: campus-share
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:mysql}
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 15MB
+  thymeleaf:
+    cache: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration,classpath:db/data
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+  type-aliases-package: com.campus
+  mapper-locations: classpath:mapper/*.xml
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+
+app:
+  media-root: ${MEDIA_ROOT:./media}
+  media-url: /media/
+  token-expire-days: 7
+  page-size: 20
+
+logging:
+  level:
+    com.campus: INFO

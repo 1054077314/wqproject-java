@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>校园二手交易平台 - Java 架构图谱</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f9; --panel: #ffffff; --ink: #17202a; --muted: #667085;
+      --line: #d8dee8; --brand: #2563eb; --brand-soft: #eff6ff;
+      --ok: #059669; --warn: #d97706; --danger: #dc2626; --code: #0f172a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; line-height: 1.55; }
+    header { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.94); backdrop-filter: blur(10px); }
+    .bar { max-width: 1280px; margin: 0 auto; padding: 18px 24px 14px; }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; }
+    nav a { color: var(--muted); text-decoration: none; border: 1px solid var(--line);
+      background: #fff; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+    nav a:hover { color: var(--brand); border-color: #93c5fd; background: var(--brand-soft); }
+    main { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+      padding: 22px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+    h2 { margin: 0 0 8px; font-size: 20px; }
+    .summary { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+    .note { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;
+      padding: 14px; color: var(--muted); font-size: 13px; }
+    .mermaid-box { overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff;
+      border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; color: #344054; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    code { display: inline-block; color: var(--code); background: #eef2f7; border-radius: 6px;
+      padding: 1px 6px; font-family: Consolas, Monaco, monospace; font-size: 12px; }
+    .tag { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700; background: #eef2ff; color: #3730a3; }
+    .tag.public { background: #ecfdf3; color: var(--ok); }
+    .tag.auth { background: #fff7ed; color: var(--warn); }
+    .tag.admin { background: #fef2f2; color: var(--danger); }
+    .fn-button { border: 1px solid #bfdbfe; background: var(--brand-soft); color: var(--brand);
+      border-radius: 8px; padding: 5px 8px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .fn-button:hover { border-color: var(--brand); background: #dbeafe; }
+    .function-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .function-card { text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 13px; cursor: pointer; }
+    .function-card:hover { border-color: #93c5fd; background: #f8fbff; }
+    .function-card strong { display: block; margin-bottom: 6px; }
+    .function-card span { display: block; color: var(--muted); font-size: 12px; }
+    .modal-backdrop { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      z-index: 50; background: rgba(15,23,42,.52); padding: 18px; }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(720px, 100%); background: #0b0b0c; color: #f8fafc; border-radius: 8px;
+      border: 1px solid #2d2d31; box-shadow: 0 24px 60px rgba(15,23,42,.28); overflow: hidden; }
+    .modal-head { display: flex; justify-content: space-between; gap: 16px; padding: 16px 18px; border-bottom: 1px solid #242428; }
+    .modal-head h3 { margin: 0; font-size: 18px; }
+    .modal-close { border: 1px solid var(--line); background: #17171a; color: #f8fafc; border-radius: 8px;
+      width: 32px; height: 32px; cursor: pointer; font-size: 18px; }
+    .modal-body { padding: 18px; }
+    .detail-list { display: grid; gap: 10px; margin: 0; }
+    .detail-list div { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 12px;
+      border-bottom: 1px solid #242428; padding-bottom: 10px; }
+    .detail-list dt { color: #a1a1aa; font-weight: 800; font-size: 13px; }
+    .detail-list dd { margin: 0; overflow-wrap: anywhere; font-size: 13px; }
+    .core-code { margin: 16px 0 0; border: 1px solid #2d2d31; border-radius: 8px; background: #050506; overflow: auto; }
+    .core-code pre { margin: 0; padding: 16px 20px; color: #e5e7eb; font-family: Consolas, Monaco, monospace;
+      font-size: 13px; line-height: 1.75; white-space: pre; }
+    .files-title { margin: 20px 0 10px; padding-top: 16px; border-top: 1px solid #242428;
+      color: #a1a1aa; font-size: 13px; font-weight: 900; }
+    .file-list { display: grid; gap: 8px; color: #c084fc; font-family: Consolas, Monaco, monospace; font-size: 14px; overflow-wrap: anywhere; }
+    @media (max-width: 860px) {
+      .grid.two { grid-template-columns: 1fr; }
+      main, .bar { padding-left: 14px; padding-right: 14px; }
+      section { padding: 16px; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <h1>校园二手交易平台 - Java 架构图谱</h1>
+      <nav>
+        <a href="#system">系统架构</a>
+        <a href="#frontend">前端组件图</a>
+        <a href="#backend">后端架构图</a>
+        <a href="#api-flow">API 调用流</a>
+        <a href="#api-table">API 端点表</a>
+        <a href="#functions">调用函数</a>
+        <a href="#deps">跨模块依赖</a>
+        <a href="#data">数据模型</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section id="system">
+      <h2>系统架构</h2>
+      <p class="summary">前后端分离：React 19 + TypeScript + Vite 前端，Spring Boot 3.3 + MyBatis + Flyway + Spring Security 后端。自定义 Bearer Token（7 天），PasswordEncoder 加密存储；MySQL <code>campus_share</code>，服务端口 <code>8085</code>。</p>
+      <div class="mermaid-box"><pre class="mermaid">
+flowchart LR
+  User["用户/管理员"] --> Browser["浏览器"]
+  Browser --> React["React 19 + TypeScript SPA"]
+  React --> Router["React Router"]
+  React --> Axios["Axios request 封装"]
+  Axios --> Api["/api REST"]
+  subgraph Spring["Spring Boot 3.3"]
+    Filter["TokenAuthenticationFilter"]
+    Ctrl["@RestController"]
+    Svc["Service 业务层"]
+    Mapper["MyBatis Mapper"]
+    Security["Security + PreAuthorize"]
+  end
+  Api --> Filter --> Security --> Ctrl --> Svc --> Mapper
+  Mapper --> DB[("MySQL 5.7 campus_share")]
+  Svc --> Media["media/products 商品图片"]
+  Browser -. 可选 .-> Thymeleaf["Thymeleaf 页面备用"]
+  classDef fe fill:#eff6ff,stroke:#2563eb,color:#17202a;
+  classDef be fill:#f0fdf4,stroke:#16a34a,color:#17202a;
+  classDef data fill:#fff7ed,stroke:#d97706,color:#17202a;
+  class React,Router,Axios fe;
+  class Filter,Ctrl,Svc,Mapper,Security,Thymeleaf be;
+  class DB,Media data;
+      </pre></div>
+    </section>
+
+    <section id="frontend">
+      <h2>前端组件图</h2>
+      <p class="summary">前端位于 <code>frontend/</code>，Vite 开发服务器代理 <code>/api</code> 与 <code>/media</code> 到 <code>http://localhost:8085</code>。页面集中在 <code>frontend/src/view</code>。</p>
+      <div class="mermaid-box"><pre class="mermaid">
+flowchart TD
+  Main["main.tsx"] --> App["App.tsx"]
+  App --> AuthProvider["AuthProvider"]
+  AuthProvider --> ToastProvider["ToastProvider"]
+  ToastProvider --> Router["BrowserRouter / Routes"]
+  Router --> Public["公开页面"]
+  Public --> Home["Home"]
+  Public --> ProductList["ProductList"]
+  Public --> ProductDetail["ProductDetail"]
+  Public --> Login["Login / Register"]
+  Router --> ProtectedRoute["ProtectedRoute"]
+  ProtectedRoute --> PublishProduct["PublishProduct"]
+  ProtectedRoute --> Profile["Profile"]
+  Router --> AdminRoute["AdminRoute"]
+  AdminRoute --> AdminLayout["AdminLayout"]
+  AdminLayout --> Statistics["Statistics"]
+  AdminLayout --> UserManage["UserManage"]
+  AdminLayout --> ProductReview["ProductReview"]
+  AdminLayout --> CategoryManage["CategoryManage"]
+  Home --> Layout["Layout"]
+  ProductList --> Layout
+  ProductDetail --> Layout
+  PublishProduct --> Layout
+  Profile --> Layout
+  AdminLayout --> Layout
+  AuthProvider --> Request["utils/request.ts"]
+  Home --> Request
+  ProductList --> Request
+  ProductDetail --> Request
+  PublishProduct --> Request
+  Profile --> Request
+  Statistics --> Request
+  UserManage --> Request
+  ProductReview --> Request
+  CategoryManage --> Request
+  click Main call showNode("fe_main")
+  click App call showNode("fe_app")
+  click AuthProvider call showNode("fe_auth_provider")
+  click ToastProvider call showNode("fe_toast_provider")
+  click Router call showNode("fe_router")
+  click Layout call showNode("fe_layout")
+  click Public call showNode("fe_public")
+  click Home call showNode("fe_home")
+  click ProductList call showNode("fe_product_list")
+  click ProductDetail call showNode("fe_product_detail")
+  click Login call showNode("fe_login")
+  click ProtectedRoute call showNode("fe_protected_route")
+  click PublishProduct call showNode("fe_publish_product")
+  click Profile call showNode("fe_profile")
+  click AdminRoute call showNode("fe_admin_route")
+  click AdminLayout call showNode("fe_admin_layout")
+  click Statistics call showNode("fe_statistics")
+  click UserManage call showNode("fe_user_manage")
+  click ProductReview call showNode("fe_product_review")
+  click CategoryManage call showNode("fe_category_manage")
+  click Request call showNode("fe_request")
+      </pre></div>
+    </section>
+
+    <section id="backend">
+      <h2>后端架构图</h2>
+      <p class="summary">按包拆分 user / category / product / appointment / favorite / comment。分层：Controller → Service → Mapper → Entity；Thymeleaf <code>web/*PageController</code> 为备用 UI。</p>
+      <div class="mermaid-box"><pre class="mermaid">
+flowchart TD
+  Boot["CampusShareApplication"] --> Sec["SecurityConfig"]
+  Boot --> Filter["TokenAuthenticationFilter"]
+  AuthCtrl["AuthController"] --> AuthSvc["AuthService"]
+  CatCtrl["CategoryController"] --> CatSvc["CategoryService"]
+  ProdCtrl["ProductController"] --> ProdSvc["ProductService"]
+  ApptCtrl["AppointmentController"] --> ApptSvc["AppointmentService"]
+  FavCtrl["FavoriteController"] --> FavSvc["FavoriteService"]
+  CmtCtrl["CommentController"] --> CmtSvc["CommentService"]
+  AuthSvc --> UserMapper["UserMapper / TokenMapper"]
+  CatSvc --> CatMapper["CategoryMapper"]
+  ProdSvc --> ProdMapper["ProductMapper / ProductImageMapper"]
+  ProdSvc --> FileStorage["FileStorageService"]
+  ApptSvc --> ApptMapper["AppointmentMapper"]
+  FavSvc --> FavMapper["FavoriteMapper"]
+  CmtSvc --> CmtMapper["CommentMapper"]
+  UserMapper --> UserEnt["User / Token"]
+  CatMapper --> CatEnt["Category"]
+  ProdMapper --> ProdEnt["Product / ProductImage"]
+  ApptMapper --> ApptEnt["Appointment"]
+  FavMapper --> FavEnt["Favorite"]
+  CmtMapper --> CmtEnt["Comment"]
+  ApptSvc --> ProdMapper
+  FavSvc --> ProdMapper
+  CmtSvc --> ProdMapper
+  CatSvc --> ProdMapper
+  PageCtrl["PageController"] -. Thymeleaf .-> AuthSvc
+  UserPage["UserPageController"] -. Thymeleaf .-> ProdSvc
+  AdminPage["AdminPageController"] -. Thymeleaf .-> AuthSvc
+  click AuthCtrl call showNode("be_auth_ctrl")
+  click CatCtrl call showNode("be_cat_ctrl")
+  click ProdCtrl call showNode("be_prod_ctrl")
+  click ApptCtrl call showNode("be_appt_ctrl")
+  click FavCtrl call showNode("be_fav_ctrl")
+  click CmtCtrl call showNode("be_cmt_ctrl")
+  click AuthSvc call showNode("be_auth_svc")
+  click CatSvc call showNode("be_cat_svc")
+  click ProdSvc call showNode("be_prod_svc")
+  click ApptSvc call showNode("be_appt_svc")
+  click FavSvc call showNode("be_fav_svc")
+  click CmtSvc call showNode("be_cmt_svc")
+  click Filter call showNode("be_filter")
+  click Sec call showNode("be_security")
+  click UserEnt call showNode("be_user_ent")
+  click CatEnt call showNode("be_cat_ent")
+  click ProdEnt call showNode("be_prod_ent")
+  click ApptEnt call showNode("be_appt_ent")
+  click FavEnt call showNode("be_fav_ent")
+  click CmtEnt call showNode("be_cmt_ent")
+      </pre></div>
+    </section>
+
+    <section id="api-flow">
+      <h2>API 调用流</h2>
+      <p class="summary">前端 <code>request.ts</code> 注入 Bearer；后端 <code>TokenAuthenticationFilter</code> 查 tokens 表；401 清 token 并跳登录。</p>
+      <div class="grid two">
+        <div class="mermaid-box"><pre class="mermaid">
+sequenceDiagram
+  participant U as 用户
+  participant P as Login 页面
+  participant R as request.ts
+  participant API as AuthController
+  participant S as AuthService
+  participant DB as MySQL
+  U->>P: 输入用户名/密码
+  P->>R: POST /login
+  R->>API: JSON 登录请求
+  API->>S: login()
+  S->>DB: 查 User + 校验密码
+  DB-->>S: User
+  S->>DB: 创建 Token(7天)
+  S-->>API: token + user
+  API-->>R: ApiResponse
+  R-->>P: 登录成功
+  P->>P: localStorage 保存 token
+        </pre></div>
+        <div class="mermaid-box"><pre class="mermaid">
+sequenceDiagram
+  participant Page as 业务页面
+  participant R as request.ts
+  participant F as TokenFilter
+  participant C as RestController
+  participant S as Service
+  participant DB as MySQL
+  Page->>R: get/post/put/patch
+  R->>F: /api/* + Bearer token
+  F->>DB: 查 Token / 过期 / User
+  F-->>C: SecurityContext
+  C->>S: 业务方法
+  S->>DB: MyBatis Mapper
+  DB-->>S: 实体/聚合
+  S-->>C: DTO / Map
+  C-->>R: ApiResponse / PageResult
+  R-->>Page: 渲染
+        </pre></div>
+      </div>
+    </section>
+
+    <section id="api-table">
+      <h2>API 端点表</h2>
+      <p class="summary">REST 接口统一挂载在 <code>/api</code>。权限由 <code>SecurityFilterChain</code> 与 <code>@PreAuthorize</code> 控制。</p>
+      <table>
+        <thead><tr><th>模块</th><th>方法</th><th>端点</th><th>权限</th><th>调用函数</th><th>用途</th><th>前端入口</th></tr></thead>
+        <tbody>
+          <tr><td>user</td><td>POST</td><td><code>/register</code></td><td><span class="tag public">公开</span></td><td><button class="fn-button" data-fn="register">register</button></td><td>注册用户</td><td>Login</td></tr>
+          <tr><td>user</td><td>POST</td><td><code>/login</code></td><td><span class="tag public">公开</span></td><td><button class="fn-button" data-fn="login">login</button></td><td>登录并签发 Token</td><td>Login</td></tr>
+          <tr><td>user</td><td>GET</td><td><code>/profile</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="profile">profile</button></td><td>当前用户</td><td>AuthContext</td></tr>
+          <tr><td>user</td><td>GET</td><td><code>/admin/users/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="admin_user_list">admin_user_list</button></td><td>用户列表</td><td>UserManage</td></tr>
+          <tr><td>user</td><td>PUT</td><td><code>/admin/users/&lt;id&gt;/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="admin_user_toggle">admin_user_toggle</button></td><td>启用/禁用</td><td>UserManage</td></tr>
+          <tr><td>user</td><td>GET</td><td><code>/admin/statistics/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="admin_statistics">admin_statistics</button></td><td>统计</td><td>Statistics</td></tr>
+          <tr><td>category</td><td>GET</td><td><code>/categories/</code></td><td><span class="tag public">公开</span></td><td><button class="fn-button" data-fn="category_list">category_list</button></td><td>分类列表</td><td>多页面</td></tr>
+          <tr><td>category</td><td>POST</td><td><code>/admin/categories/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="category_create">category_create</button></td><td>创建分类</td><td>CategoryManage</td></tr>
+          <tr><td>category</td><td>PUT</td><td><code>/admin/categories/&lt;id&gt;/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="category_detail">category_detail</button></td><td>更新分类</td><td>CategoryManage</td></tr>
+          <tr><td>category</td><td>DELETE</td><td><code>/admin/categories/&lt;id&gt;/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="category_detail">category_detail</button></td><td>删除分类</td><td>CategoryManage</td></tr>
+          <tr><td>product</td><td>GET</td><td><code>/products/</code></td><td><span class="tag public">公开</span></td><td><button class="fn-button" data-fn="product_list_create">product_list_create</button></td><td>上架商品</td><td>Home / List</td></tr>
+          <tr><td>product</td><td>POST</td><td><code>/products/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="product_list_create">product_list_create</button></td><td>发布商品</td><td>PublishProduct</td></tr>
+          <tr><td>product</td><td>GET</td><td><code>/products/&lt;id&gt;/</code></td><td><span class="tag public">公开</span></td><td><button class="fn-button" data-fn="product_detail">product_detail</button></td><td>详情</td><td>ProductDetail</td></tr>
+          <tr><td>product</td><td>PUT</td><td><code>/products/&lt;id&gt;/</code></td><td><span class="tag auth">卖家</span></td><td><button class="fn-button" data-fn="product_detail">product_detail</button></td><td>编辑</td><td>预留</td></tr>
+          <tr><td>product</td><td>DELETE</td><td><code>/products/&lt;id&gt;/</code></td><td><span class="tag auth">卖家</span></td><td><button class="fn-button" data-fn="product_detail">product_detail</button></td><td>软删除</td><td>预留</td></tr>
+          <tr><td>product</td><td>GET</td><td><code>/my-products/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="my_product_list">my_product_list</button></td><td>我的发布</td><td>Profile</td></tr>
+          <tr><td>product</td><td>GET</td><td><code>/admin/pending-products/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="pending_product_list">pending_product_list</button></td><td>待审核</td><td>ProductReview</td></tr>
+          <tr><td>product</td><td>POST</td><td><code>/admin/products/&lt;id&gt;/review/</code></td><td><span class="tag admin">管理员</span></td><td><button class="fn-button" data-fn="product_review">product_review</button></td><td>审核</td><td>ProductReview</td></tr>
+          <tr><td>appointment</td><td>POST</td><td><code>/appointments/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="create_appointment">create_appointment</button></td><td>预约</td><td>ProductDetail</td></tr>
+          <tr><td>appointment</td><td>PATCH</td><td><code>/appointments/&lt;id&gt;/</code></td><td><span class="tag auth">卖家</span></td><td><button class="fn-button" data-fn="update_appointment_status">update_appointment_status</button></td><td>确认/拒绝</td><td>Profile</td></tr>
+          <tr><td>appointment</td><td>GET</td><td><code>/my-appointments/as-buyer/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="my_appointments_as_buyer">my_appointments_as_buyer</button></td><td>买家预约</td><td>Profile</td></tr>
+          <tr><td>appointment</td><td>GET</td><td><code>/my-appointments/as-seller/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="my_appointments_as_seller">my_appointments_as_seller</button></td><td>卖家预约</td><td>Profile</td></tr>
+          <tr><td>favorite</td><td>POST</td><td><code>/favorites/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="toggle_favorite">toggle_favorite</button></td><td>收藏切换</td><td>ProductDetail</td></tr>
+          <tr><td>favorite</td><td>GET</td><td><code>/my-favorites/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="my_favorites">my_favorites</button></td><td>我的收藏</td><td>Profile</td></tr>
+          <tr><td>comment</td><td>POST</td><td><code>/comments/</code></td><td><span class="tag auth">登录</span></td><td><button class="fn-button" data-fn="create_comment">create_comment</button></td><td>留言</td><td>ProductDetail</td></tr>
+          <tr><td>comment</td><td>GET</td><td><code>/products/&lt;id&gt;/comments/</code></td><td><span class="tag public">公开</span></td><td><button class="fn-button" data-fn="product_comments">product_comments</button></td><td>留言列表</td><td>ProductDetail</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="functions">
+      <h2>调用函数索引</h2>
+      <p class="summary">点击卡片查看 Controller/Service 路径与核心片段。</p>
+      <div class="function-grid" id="functionGrid"></div>
+    </section>
+
+    <section id="deps">
+      <h2>跨模块依赖</h2>
+      <p class="summary">商品是业务中心；预约/收藏/评论依赖商品与用户。</p>
+      <div class="mermaid-box"><pre class="mermaid">
+flowchart LR
+  Users["user\nUser / Token"] --> Products["product\nProduct / ProductImage"]
+  Categories["category\nCategory"] --> Products
+  Products --> Appointments["appointment\nAppointment"]
+  Users --> Appointments
+  Products --> Favorites["favorite\nFavorite"]
+  Users --> Favorites
+  Products --> Comments["comment\nComment"]
+  Users --> Comments
+  Categories -. 删除前检查 .-> Products
+  Products -. 删除前检查预约 .-> Appointments
+  Users -. 后台统计 .-> Products
+  classDef core fill:#eff6ff,stroke:#2563eb,color:#17202a;
+  classDef rel fill:#f0fdf4,stroke:#16a34a,color:#17202a;
+  class Products core;
+  class Users,Categories,Appointments,Favorites,Comments rel;
+      </pre></div>
+      <div class="note">AppointmentService / FavoriteService / CommentService 注入 ProductMapper；删除分类前检查商品；商品软删前检查预约。</div>
+    </section>
+
+    <section id="data">
+      <h2>数据模型</h2>
+      <p class="summary">表结构由 Flyway <code>V1__init.sql</code> 管理；商品与图片支持 <code>is_deleted</code> 软删除。</p>
+      <div class="mermaid-box"><pre class="mermaid">
+erDiagram
+  USER ||--o{ TOKEN : owns
+  USER ||--o{ PRODUCT : sells
+  CATEGORY ||--o{ PRODUCT : classifies
+  PRODUCT ||--o{ PRODUCT_IMAGE : has
+  USER ||--o{ APPOINTMENT : buyer
+  PRODUCT ||--o{ APPOINTMENT : reserved
+  USER ||--o{ FAVORITE : collects
+  PRODUCT ||--o{ FAVORITE : collected
+  USER ||--o{ COMMENT : writes
+  PRODUCT ||--o{ COMMENT : receives
+  USER { bigint id PK string username UK string password boolean is_active boolean is_staff datetime created_at }
+  TOKEN { string key PK bigint user_id FK datetime created_at datetime expires_at }
+  CATEGORY { bigint id PK string name UK int sort_order datetime created_at }
+  PRODUCT { bigint id PK string title text description decimal price bigint category_id FK bigint seller_id FK string status boolean is_deleted }
+  PRODUCT_IMAGE { bigint id PK bigint product_id FK string image boolean is_deleted }
+  APPOINTMENT { bigint id PK bigint buyer_id FK bigint product_id FK string status }
+  FAVORITE { bigint id PK bigint user_id FK bigint product_id FK }
+  COMMENT { bigint id PK bigint user_id FK bigint product_id FK string content }
+      </pre></div>
+      <table>
+        <thead><tr><th>实体</th><th>表名</th><th>关键约束</th><th>业务说明</th></tr></thead>
+        <tbody>
+          <tr><td>User</td><td><code>users</code></td><td>username unique</td><td>PasswordEncoder 加密密码</td></tr>
+          <tr><td>Token</td><td><code>tokens</code></td><td>key PK，7 天过期</td><td>Bearer Token</td></tr>
+          <tr><td>Category</td><td><code>categories</code></td><td>name unique</td><td>商品分类</td></tr>
+          <tr><td>Product</td><td><code>products</code></td><td>seller/category FK</td><td>pending/active/rejected/offline</td></tr>
+          <tr><td>ProductImage</td><td><code>product_images</code></td><td>product FK</td><td>media/products/</td></tr>
+          <tr><td>Appointment</td><td><code>appointments</code></td><td>unique buyer+product</td><td>预约状态机</td></tr>
+          <tr><td>Favorite</td><td><code>favorites</code></td><td>unique user+product</td><td>收藏切换</td></tr>
+          <tr><td>Comment</td><td><code>comments</code></td><td>content ≤ 500</td><td>商品留言</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="functionModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3 id="functionTitle">调用函数</h3>
+        <button class="modal-close" id="modalClose" type="button">×</button>
+      </div>
+      <div class="modal-body"><dl class="detail-list" id="functionDetails"></dl></div>
+    </div>
+  </div>
+
+  <script>
+    const ROOT = "D:/bq/cc/wqproject-java";
+    const FUNCTIONS = {
+      register: { module:"user", file:ROOT+"/src/main/java/com/campus/user/controller/AuthController.java", folder:ROOT+"/src/main/java/com/campus/user", api:"POST /api/register", frontend:ROOT+"/frontend/src/view/login/Login.tsx", summary:"AuthService.register：用户名唯一校验，PasswordEncoder 编码密码后写入 users。" },
+      login: { module:"user", file:ROOT+"/src/main/java/com/campus/user/controller/AuthController.java", folder:ROOT+"/src/main/java/com/campus/user", api:"POST /api/login", frontend:ROOT+"/frontend/src/view/login/Login.tsx", summary:"AuthService.login：校验密码与 is_active，创建 7 天 Token。" },
+      profile: { module:"user", file:ROOT+"/src/main/java/com/campus/user/controller/AuthController.java", folder:ROOT+"/src/main/java/com/campus/user", api:"GET /api/profile", frontend:ROOT+"/frontend/src/context/AuthContext.tsx", summary:"返回当前 UserPrincipal 的 UserView。" },
+      admin_user_list: { module:"user", file:ROOT+"/src/main/java/com/campus/user/controller/AuthController.java", folder:ROOT+"/src/main/java/com/campus/user", api:"GET /api/admin/users/", frontend:ROOT+"/frontend/src/view/admin/UserManage.tsx", summary:"@PreAuthorize ADMIN；分页用户列表。" },
+      admin_user_toggle: { module:"user", file:ROOT+"/src/main/java/com/campus/user/controller/AuthController.java", folder:ROOT+"/src/main/java/com/campus/user", api:"PUT /api/admin/users/<id>/", frontend:ROOT+"/frontend/src/view/admin/UserManage.tsx", summary:"启用/禁用用户，禁止禁自己。" },
+      admin_statistics: { module:"user", file:ROOT+"/src/main/java/com/campus/user/controller/AuthController.java", folder:ROOT+"/src/main/java/com/campus/user", api:"GET /api/admin/statistics/", frontend:ROOT+"/frontend/src/view/admin/Statistics.tsx", summary:"聚合用户/商品/待审核统计。" },
+      category_list: { module:"category", file:ROOT+"/src/main/java/com/campus/category/controller/CategoryController.java", folder:ROOT+"/src/main/java/com/campus/category", api:"GET /api/categories/", frontend:ROOT+"/frontend/src/view/products/ProductList.tsx", summary:"公开分类列表。" },
+      category_create: { module:"category", file:ROOT+"/src/main/java/com/campus/category/controller/CategoryController.java", folder:ROOT+"/src/main/java/com/campus/category", api:"POST /api/admin/categories/", frontend:ROOT+"/frontend/src/view/admin/CategoryManage.tsx", summary:"管理员创建分类。" },
+      category_detail: { module:"category", file:ROOT+"/src/main/java/com/campus/category/controller/CategoryController.java", folder:ROOT+"/src/main/java/com/campus/category", api:"PUT/DELETE /api/admin/categories/<id>/", frontend:ROOT+"/frontend/src/view/admin/CategoryManage.tsx", summary:"更新/删除；删除前检查商品。" },
+      product_list_create: { module:"product", file:ROOT+"/src/main/java/com/campus/product/controller/ProductController.java", folder:ROOT+"/src/main/java/com/campus/product", api:"GET/POST /api/products/", frontend:ROOT+"/frontend/src/view/products/PublishProduct.tsx", summary:"列表 active；发布支持 JSON/Multipart，默认 pending。" },
+      product_detail: { module:"product", file:ROOT+"/src/main/java/com/campus/product/controller/ProductController.java", folder:ROOT+"/src/main/java/com/campus/product", api:"GET/PUT/DELETE /api/products/<id>/", frontend:ROOT+"/frontend/src/view/products/ProductDetail.tsx", summary:"详情/编辑/软删除；删前查预约。" },
+      my_product_list: { module:"product", file:ROOT+"/src/main/java/com/campus/product/controller/ProductController.java", folder:ROOT+"/src/main/java/com/campus/product", api:"GET /api/my-products/", frontend:ROOT+"/frontend/src/view/profile/Profile.tsx", summary:"当前用户商品，支持 status 过滤。" },
+      product_review: { module:"product", file:ROOT+"/src/main/java/com/campus/product/controller/ProductController.java", folder:ROOT+"/src/main/java/com/campus/product", api:"POST /api/admin/products/<id>/review/", frontend:ROOT+"/frontend/src/view/admin/ProductReview.tsx", summary:"approve→active；reject→rejected。" },
+      pending_product_list: { module:"product", file:ROOT+"/src/main/java/com/campus/product/controller/ProductController.java", folder:ROOT+"/src/main/java/com/campus/product", api:"GET /api/admin/pending-products/", frontend:ROOT+"/frontend/src/view/admin/ProductReview.tsx", summary:"待审核队列。" },
+      create_appointment: { module:"appointment", file:ROOT+"/src/main/java/com/campus/appointment/controller/AppointmentController.java", folder:ROOT+"/src/main/java/com/campus/appointment", api:"POST /api/appointments/", frontend:ROOT+"/frontend/src/view/products/ProductDetail.tsx", summary:"禁止自约/非 active/重复预约。" },
+      update_appointment_status: { module:"appointment", file:ROOT+"/src/main/java/com/campus/appointment/controller/AppointmentController.java", folder:ROOT+"/src/main/java/com/campus/appointment", api:"PATCH /api/appointments/<id>/", frontend:ROOT+"/frontend/src/view/profile/Profile.tsx", summary:"卖家 confirm/reject。" },
+      my_appointments_as_buyer: { module:"appointment", file:ROOT+"/src/main/java/com/campus/appointment/controller/AppointmentController.java", folder:ROOT+"/src/main/java/com/campus/appointment", api:"GET /api/my-appointments/as-buyer/", frontend:ROOT+"/frontend/src/view/profile/Profile.tsx", summary:"买家预约列表。" },
+      my_appointments_as_seller: { module:"appointment", file:ROOT+"/src/main/java/com/campus/appointment/controller/AppointmentController.java", folder:ROOT+"/src/main/java/com/campus/appointment", api:"GET /api/my-appointments/as-seller/", frontend:ROOT+"/frontend/src/view/profile/Profile.tsx", summary:"卖家预约列表。" },
+      toggle_favorite: { module:"favorite", file:ROOT+"/src/main/java/com/campus/favorite/controller/FavoriteController.java", folder:ROOT+"/src/main/java/com/campus/favorite", api:"POST /api/favorites/", frontend:ROOT+"/frontend/src/view/products/ProductDetail.tsx", summary:"收藏/取消收藏。" },
+      my_favorites: { module:"favorite", file:ROOT+"/src/main/java/com/campus/favorite/controller/FavoriteController.java", folder:ROOT+"/src/main/java/com/campus/favorite", api:"GET /api/my-favorites/", frontend:ROOT+"/frontend/src/view/profile/Profile.tsx", summary:"我的收藏。" },
+      create_comment: { module:"comment", file:ROOT+"/src/main/java/com/campus/comment/controller/CommentController.java", folder:ROOT+"/src/main/java/com/campus/comment", api:"POST /api/comments/", frontend:ROOT+"/frontend/src/view/products/ProductDetail.tsx", summary:"留言最长 500 字。" },
+      product_comments: { module:"comment", file:ROOT+"/src/main/java/com/campus/comment/controller/CommentController.java", folder:ROOT+"/src/main/java/com/campus/comment", api:"GET /api/products/<id>/comments/", frontend:ROOT+"/frontend/src/view/products/ProductDetail.tsx", summary:"公开留言分页。" }
+    };
+
+    const NODES = {
+      fe_main:{title:"main.tsx",type:"前端入口",folder:ROOT+"/frontend/src",file:ROOT+"/frontend/src/main.tsx",summary:"React 挂载入口。"},
+      fe_app:{title:"App.tsx",type:"前端路由根",folder:ROOT+"/frontend/src",file:ROOT+"/frontend/src/App.tsx",summary:"Auth/Toast/Router 组合。"},
+      fe_auth_provider:{title:"AuthProvider",type:"上下文",folder:ROOT+"/frontend/src/context",file:ROOT+"/frontend/src/context/AuthContext.tsx",summary:"token/用户/登录登出。"},
+      fe_toast_provider:{title:"ToastProvider",type:"上下文",folder:ROOT+"/frontend/src/context",file:ROOT+"/frontend/src/context/ToastContext.tsx",summary:"全局提示。"},
+      fe_router:{title:"Routes",type:"路由",folder:ROOT+"/frontend/src",file:ROOT+"/frontend/src/App.tsx",summary:"公开/保护/管理员路由。"},
+      fe_layout:{title:"Layout",type:"布局",folder:ROOT+"/frontend/src/components/layout",file:ROOT+"/frontend/src/components/layout/Layout.tsx",summary:"公共导航布局。"},
+      fe_public:{title:"公开页面",type:"分组",folder:ROOT+"/frontend/src/view",file:ROOT+"/frontend/src/App.tsx",summary:"首页/列表/详情/登录。"},
+      fe_home:{title:"Home",type:"页面",folder:ROOT+"/frontend/src/view/home",file:ROOT+"/frontend/src/view/home/Home.tsx",summary:"最新商品。"},
+      fe_product_list:{title:"ProductList",type:"页面",folder:ROOT+"/frontend/src/view/products",file:ROOT+"/frontend/src/view/products/ProductList.tsx",summary:"列表+分类筛选。"},
+      fe_product_detail:{title:"ProductDetail",type:"页面",folder:ROOT+"/frontend/src/view/products",file:ROOT+"/frontend/src/view/products/ProductDetail.tsx",summary:"详情/收藏/预约/留言。"},
+      fe_login:{title:"Login",type:"页面",folder:ROOT+"/frontend/src/view/login",file:ROOT+"/frontend/src/view/login/Login.tsx",summary:"登录注册。"},
+      fe_protected_route:{title:"ProtectedRoute",type:"守卫",folder:ROOT+"/frontend/src/components/common",file:ROOT+"/frontend/src/components/common/ProtectedRoute.tsx",summary:"未登录跳转。"},
+      fe_publish_product:{title:"PublishProduct",type:"页面",folder:ROOT+"/frontend/src/view/products",file:ROOT+"/frontend/src/view/products/PublishProduct.tsx",summary:"发布商品。"},
+      fe_profile:{title:"Profile",type:"页面",folder:ROOT+"/frontend/src/view/profile",file:ROOT+"/frontend/src/view/profile/Profile.tsx",summary:"个人中心。"},
+      fe_admin_route:{title:"AdminRoute",type:"守卫",folder:ROOT+"/frontend/src/components/common",file:ROOT+"/frontend/src/components/common/ProtectedRoute.tsx",summary:"校验 is_staff。"},
+      fe_admin_layout:{title:"AdminLayout",type:"后台",folder:ROOT+"/frontend/src/view/admin",file:ROOT+"/frontend/src/view/admin/AdminLayout.tsx",summary:"四个管理 Tab。"},
+      fe_statistics:{title:"Statistics",type:"后台",folder:ROOT+"/frontend/src/view/admin",file:ROOT+"/frontend/src/view/admin/Statistics.tsx",summary:"Chart.js 统计。"},
+      fe_user_manage:{title:"UserManage",type:"后台",folder:ROOT+"/frontend/src/view/admin",file:ROOT+"/frontend/src/view/admin/UserManage.tsx",summary:"用户管理。"},
+      fe_product_review:{title:"ProductReview",type:"后台",folder:ROOT+"/frontend/src/view/admin",file:ROOT+"/frontend/src/view/admin/ProductReview.tsx",summary:"商品审核。"},
+      fe_category_manage:{title:"CategoryManage",type:"后台",folder:ROOT+"/frontend/src/view/admin",file:ROOT+"/frontend/src/view/admin/CategoryManage.tsx",summary:"分类 CRUD。"},
+      fe_request:{title:"request.ts",type:"API 工具",folder:ROOT+"/frontend/src/utils",file:ROOT+"/frontend/src/utils/request.ts",summary:"Axios + Bearer + 401。"},
+      be_auth_ctrl:{title:"AuthController",type:"Controller",folder:ROOT+"/src/main/java/com/campus/user/controller",file:ROOT+"/src/main/java/com/campus/user/controller/AuthController.java",summary:"认证与管理端用户。"},
+      be_cat_ctrl:{title:"CategoryController",type:"Controller",folder:ROOT+"/src/main/java/com/campus/category/controller",file:ROOT+"/src/main/java/com/campus/category/controller/CategoryController.java",summary:"分类 API。"},
+      be_prod_ctrl:{title:"ProductController",type:"Controller",folder:ROOT+"/src/main/java/com/campus/product/controller",file:ROOT+"/src/main/java/com/campus/product/controller/ProductController.java",summary:"商品 API。"},
+      be_appt_ctrl:{title:"AppointmentController",type:"Controller",folder:ROOT+"/src/main/java/com/campus/appointment/controller",file:ROOT+"/src/main/java/com/campus/appointment/controller/AppointmentController.java",summary:"预约 API。"},
+      be_fav_ctrl:{title:"FavoriteController",type:"Controller",folder:ROOT+"/src/main/java/com/campus/favorite/controller",file:ROOT+"/src/main/java/com/campus/favorite/controller/FavoriteController.java",summary:"收藏 API。"},
+      be_cmt_ctrl:{title:"CommentController",type:"Controller",folder:ROOT+"/src/main/java/com/campus/comment/controller",file:ROOT+"/src/main/java/com/campus/comment/controller/CommentController.java",summary:"留言 API。"},
+      be_auth_svc:{title:"AuthService",type:"Service",folder:ROOT+"/src/main/java/com/campus/user/service",file:ROOT+"/src/main/java/com/campus/user/service/AuthService.java",summary:"认证业务。"},
+      be_cat_svc:{title:"CategoryService",type:"Service",folder:ROOT+"/src/main/java/com/campus/category/service",file:ROOT+"/src/main/java/com/campus/category/service/CategoryService.java",summary:"分类业务。"},
+      be_prod_svc:{title:"ProductService",type:"Service",folder:ROOT+"/src/main/java/com/campus/product/service",file:ROOT+"/src/main/java/com/campus/product/service/ProductService.java",summary:"商品业务。"},
+      be_appt_svc:{title:"AppointmentService",type:"Service",folder:ROOT+"/src/main/java/com/campus/appointment/service",file:ROOT+"/src/main/java/com/campus/appointment/service/AppointmentService.java",summary:"预约业务。"},
+      be_fav_svc:{title:"FavoriteService",type:"Service",folder:ROOT+"/src/main/java/com/campus/favorite/service",file:ROOT+"/src/main/java/com/campus/favorite/service/FavoriteService.java",summary:"收藏业务。"},
+      be_cmt_svc:{title:"CommentService",type:"Service",folder:ROOT+"/src/main/java/com/campus/comment/service",file:ROOT+"/src/main/java/com/campus/comment/service/CommentService.java",summary:"留言业务。"},
+      be_filter:{title:"TokenAuthenticationFilter",type:"Filter",folder:ROOT+"/src/main/java/com/campus/security",file:ROOT+"/src/main/java/com/campus/security/TokenAuthenticationFilter.java",summary:"解析 Bearer Token。"},
+      be_security:{title:"SecurityConfig",type:"Config",folder:ROOT+"/src/main/java/com/campus/config",file:ROOT+"/src/main/java/com/campus/config/SecurityConfig.java",summary:"无状态安全与路径权限。"},
+      be_user_ent:{title:"User / Token",type:"Entity",folder:ROOT+"/src/main/java/com/campus/user/entity",file:ROOT+"/src/main/java/com/campus/user/entity/User.java",summary:"用户与 Token。"},
+      be_cat_ent:{title:"Category",type:"Entity",folder:ROOT+"/src/main/java/com/campus/category/entity",file:ROOT+"/src/main/java/com/campus/category/entity/Category.java",summary:"分类实体。"},
+      be_prod_ent:{title:"Product",type:"Entity",folder:ROOT+"/src/main/java/com/campus/product/entity",file:ROOT+"/src/main/java/com/campus/product/entity/Product.java",summary:"商品实体。"},
+      be_appt_ent:{title:"Appointment",type:"Entity",folder:ROOT+"/src/main/java/com/campus/appointment/entity",file:ROOT+"/src/main/java/com/campus/appointment/entity/Appointment.java",summary:"预约实体。"},
+      be_fav_ent:{title:"Favorite",type:"Entity",folder:ROOT+"/src/main/java/com/campus/favorite/entity",file:ROOT+"/src/main/java/com/campus/favorite/entity/Favorite.java",summary:"收藏实体。"},
+      be_cmt_ent:{title:"Comment",type:"Entity",folder:ROOT+"/src/main/java/com/campus/comment/entity",file:ROOT+"/src/main/java/com/campus/comment/entity/Comment.java",summary:"留言实体。"}
+    };
+
+    const CORE_CODE = {
+      login: '@PostMapping("/login")\npublic ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {\n    return ResponseEntity.ok(ApiResponse.ok("登录成功", authService.login(request)));\n}',
+      register: '@PostMapping("/register")\npublic ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {\n    return ResponseEntity.status(CREATED).body(ApiResponse.created("注册成功", authService.register(request)));\n}',
+      product_list_create: '@GetMapping("/products/")\npublic PageResult<?> list(...) { return productService.listActive(...); }\n\n@PostMapping("/products/")\npublic ResponseEntity<?> create(...) { return productService.create(...); }',
+      create_appointment: '@PostMapping("/appointments/")\npublic ResponseEntity<?> create(@RequestBody Map<String, Long> body) {\n    return appointmentService.create(body.get("product_id"), SecurityUtils.requireUser());\n}',
+      be_filter: 'String header = request.getHeader("Authorization");\nif (header != null && header.startsWith("Bearer ")) {\n    Token token = tokenMapper.findByKey(header.substring(7));\n    // set SecurityContext UserPrincipal\n}',
+      fe_request: 'const request = axios.create({ baseURL: "/api" })\nrequest.interceptors.request.use((config) => {\n  const token = localStorage.getItem("token")\n  if (token) config.headers.Authorization = `Bearer ${token}`\n  return config\n})'
+    };
+
+    function escapeHtml(v) {
+      return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function showFunction(name) {
+      const item = FUNCTIONS[name]; if (!item) return;
+      document.getElementById('functionTitle').textContent = name + '()';
+      const code = (CORE_CODE[name] || item.summary).replace(/\\n/g, '\n');
+      document.getElementById('functionDetails').innerHTML =
+        '<div><dt>职责说明</dt><dd>'+escapeHtml(item.summary)+'</dd></div>'+
+        '<div><dt>API 映射</dt><dd>'+escapeHtml(item.api)+'</dd></div>'+
+        '<div><dt>所属模块</dt><dd>'+escapeHtml(item.module)+'</dd></div>'+
+        '<div><dt>前端调用</dt><dd>'+escapeHtml(item.frontend)+'</dd></div>'+
+        '<div class="core-code"><pre>'+escapeHtml(code)+'</pre></div>'+
+        '<div class="files-title">FILES</div><div class="file-list"><span>'+escapeHtml(item.file)+'</span><span>'+escapeHtml(item.folder)+'</span></div>';
+      document.getElementById('functionModal').classList.add('open');
+    }
+    window.showNode = function(name) {
+      const item = NODES[name]; if (!item) return;
+      document.getElementById('functionTitle').textContent = item.title;
+      const code = (CORE_CODE[name] || item.summary).replace(/\\n/g, '\n');
+      document.getElementById('functionDetails').innerHTML =
+        '<div><dt>类型</dt><dd>'+escapeHtml(item.type)+'</dd></div>'+
+        '<div><dt>说明</dt><dd>'+escapeHtml(item.summary)+'</dd></div>'+
+        '<div class="core-code"><pre>'+escapeHtml(code)+'</pre></div>'+
+        '<div class="files-title">FILES</div><div class="file-list"><span>'+escapeHtml(item.file)+'</span><span>'+escapeHtml(item.folder)+'</span></div>';
+      document.getElementById('functionModal').classList.add('open');
+    };
+    function closeModal() { document.getElementById('functionModal').classList.remove('open'); }
+    document.getElementById('functionGrid').innerHTML = Object.keys(FUNCTIONS).map(name => {
+      const item = FUNCTIONS[name];
+      return '<button class="function-card" type="button" data-fn="'+name+'"><strong>'+name+'()</strong><span>'+item.api+'</span><span>'+item.file+'</span></button>';
+    }).join('');
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('[data-fn]');
+      if (btn) { showFunction(btn.dataset.fn); return; }
+      if (e.target.id === 'functionModal') closeModal();
+    });
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    mermaid.initialize({
+      startOnLoad: true, securityLevel: 'loose', theme: 'base',
+      themeVariables: {
+        primaryColor:'#eff6ff', primaryTextColor:'#17202a', primaryBorderColor:'#2563eb',
+        lineColor:'#667085', secondaryColor:'#f0fdf4', tertiaryColor:'#fff7ed',
+        fontFamily:'Microsoft YaHei, PingFang SC, system-ui, sans-serif'
+      }
+    });
+  </script>
+</body>
+</html>

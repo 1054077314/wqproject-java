@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="${pageTitle} ?: 'CAMPUS_SHARE'">CAMPUS_SHARE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+<header class="border-b bg-white/90 backdrop-blur sticky top-0 z-20">
+    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        <a href="/" class="font-bold text-lg tracking-tight text-emerald-700">CAMPUS_SHARE</a>
+        <nav class="flex items-center gap-4 text-sm">
+            <a href="/products" class="hover:text-emerald-700">商品</a>
+            <a href="/publish" class="hover:text-emerald-700" sec:authorize="isAuthenticated()">发布</a>
+            <a href="/profile" class="hover:text-emerald-700" sec:authorize="isAuthenticated()">我的</a>
+            <a href="/admin" class="hover:text-emerald-700" sec:authorize="hasRole('ADMIN')">管理</a>
+            <a href="/login" class="hover:text-emerald-700" sec:authorize="!isAuthenticated()">登录</a>
+            <form th:action="@{/logout}" method="post" sec:authorize="isAuthenticated()" class="inline">
+                <button type="submit" class="hover:text-emerald-700">退出</button>
+            </form>
+        </nav>
+    </div>
+</header>
+<main class="max-w-6xl mx-auto px-4 py-8">
+    <div th:if="${message}" class="mb-4 rounded-lg bg-emerald-50 text-emerald-800 px-4 py-3" th:text="${message}"></div>
+    <div th:if="${error}" class="mb-4 rounded-lg bg-rose-50 text-rose-800 px-4 py-3" th:text="${error}"></div>
+    <div th:replace="~{::content}">内容</div>
+</main>
+<footer class="border-t py-8 text-center text-sm text-slate-500">校园二手闲置 · CAMPUS_SHARE Java</footer>
+</body>
+</html>

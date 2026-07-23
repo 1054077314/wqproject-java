@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>发布商品 - CAMPUS_SHARE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body class="min-h-screen bg-slate-50">
+<header class="border-b bg-white">
+    <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+        <a href="/" class="font-bold text-emerald-700">CAMPUS_SHARE</a>
+        <a href="/profile" class="text-sm">我的</a>
+    </div>
+</header>
+<main class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6">发布闲置</h1>
+    <div th:if="${error}" class="mb-4 text-rose-700 bg-rose-50 rounded px-3 py-2" th:text="${error}"></div>
+    <form th:action="@{/publish}" method="post" enctype="multipart/form-data" class="bg-white border rounded-xl p-6 space-y-4">
+        <input name="title" required maxlength="100" placeholder="标题" class="w-full border rounded-lg px-3 py-2"/>
+        <textarea name="description" required maxlength="2000" rows="5" placeholder="描述" class="w-full border rounded-lg px-3 py-2"></textarea>
+        <input name="price" type="number" step="0.01" min="0.01" required placeholder="价格" class="w-full border rounded-lg px-3 py-2"/>
+        <select name="category" required class="w-full border rounded-lg px-3 py-2">
+            <option value="">选择分类</option>
+            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"></option>
+        </select>
+        <input name="contact_info" required maxlength="100" placeholder="联系方式" class="w-full border rounded-lg px-3 py-2"/>
+        <div>
+            <label class="text-sm text-slate-600">图片（最多3张）</label>
+            <input type="file" name="files" accept="image/*" multiple class="mt-1 block w-full"/>
+        </div>
+        <button class="w-full py-2.5 bg-emerald-700 text-white rounded-lg">提交审核</button>
+    </form>
+</main>
+</body>
+</html>
