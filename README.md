@@ -33,6 +33,7 @@
 - 用户管理（启用/禁用账户）
 - 商品审核（通过/驳回 + 驳回原因）
 - 分类管理（CRUD、排序）
+- 操作审计留痕（审核/成交/启停用户等）
 
 ## 项目结构
 
@@ -254,7 +255,7 @@ categories (分类)
 - 图片软删时同步清理磁盘文件；收藏列表仅展示在售商品
 - 分类列表与统计看板使用 **Caffeine** 本地短缓存（5 分钟 TTL，写路径 `@CacheEvict` 主动失效）
 - 暴露 `/actuator/health`、`/actuator/prometheus` 供探活与指标采集；HikariCP 连接池可配置
-- 管理员可查审计：`GET /api/admin/audit-logs/`
+- 管理员可查审计：`GET /api/admin/audit-logs/`（后台「操作审计留痕」页）
 - 演示数据：`db/data/V5__enrich_demo_data.sql` 扩充用户/商品状态分布（含今日新增、sold/pending/offline）；账号仍为 `admin/admin1234`、`student*/student1234`。**已有库需重启应用让 Flyway 跑 V5**（或重建库）。
 
 ## 本地 Docker（可选）

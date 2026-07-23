@@ -4,6 +4,7 @@ import {
   Users2,
   CheckSquare,
   SlidersHorizontal,
+  ScrollText,
   type LucideIcon
 } from 'lucide-react'
 import Layout from '../../components/layout/Layout'
@@ -11,8 +12,9 @@ import Statistics from './Statistics'
 import UserManage from './UserManage'
 import ProductReview from './ProductReview'
 import CategoryManage from './CategoryManage'
+import AuditLogManage from './AuditLogManage'
 
-type AdminTab = 'stats' | 'users' | 'review' | 'categories'
+type AdminTab = 'stats' | 'users' | 'review' | 'categories' | 'audit'
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<AdminTab>('stats')
@@ -22,6 +24,7 @@ export default function AdminLayout() {
     { key: 'users', label: '平台用户管理', icon: Users2 },
     { key: 'review', label: '商品审核管理', icon: CheckSquare },
     { key: 'categories', label: '分类板块配置', icon: SlidersHorizontal },
+    { key: 'audit', label: '操作审计留痕', icon: ScrollText },
   ]
 
   return (
@@ -29,11 +32,10 @@ export default function AdminLayout() {
       <div className="mb-6 select-none text-left">
         <h1 className="text-xl font-bold tracking-tight text-neutral-900">平台安全总控后台</h1>
         <p className="text-xs text-neutral-500 mt-1 font-semibold leading-relaxed">
-          管理员专属平台安全配置决策中枢。包含商品过滤排队审查、校园分类定制、以及交易端用户封锁激活等关键决策工具。
+          管理员专属平台安全配置决策中枢。包含商品过滤排队审查、校园分类定制、交易端用户封锁激活，以及敏感操作审计追溯。
         </p>
       </div>
 
-      {/* Tabs list with minimalist theme buttons */}
       <div className="flex flex-wrap gap-2 border-b border-primary-faint pb-4 mb-8 select-none">
         {tabs.map(t => {
           const Icon = t.icon
@@ -59,6 +61,7 @@ export default function AdminLayout() {
         {tab === 'users' && <UserManage />}
         {tab === 'review' && <ProductReview />}
         {tab === 'categories' && <CategoryManage />}
+        {tab === 'audit' && <AuditLogManage />}
       </div>
     </Layout>
   )

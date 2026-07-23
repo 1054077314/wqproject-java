@@ -111,3 +111,14 @@ export interface Statistics {
   today_new_products: number
   pending_products: number
 }
+
+export interface AuditLogItem {
+  id: number
+  actor_id: number | null
+  actor_username: string | null
+  action: string
+  resource_type: string
+  resource_id: number | null
+  detail: string | null
+  created_at: string
+}
