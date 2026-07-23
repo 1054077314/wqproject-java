@@ -1,13 +1,17 @@
-import { Link, useLocation } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
-  Home
+  Home,
+  Search
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+  const [navSearch, setNavSearch] = useState('')
 
   const isActive = (path: string) => {
     if (path === '/') {
@@ -24,21 +28,44 @@ export default function Layout({ children }: { children: ReactNode }) {
     }`
   }
 
+  function handleNavSearch(e: FormEvent) {
+    e.preventDefault()
+    const q = navSearch.trim()
+    if (q) {
+      navigate(`/products?search=${encodeURIComponent(q)}`)
+    } else {
+      navigate('/products')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white text-neutral-800 flex flex-col justify-between font-sans selection:bg-accent selection:text-neutral-900">
       <div>
         {/* Navigation Bar */}
         <header className="bg-white border-b border-primary-faint sticky top-0 z-40">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center gap-4">
             {/* Branding */}
-            <Link to="/" className="inline-flex items-center gap-2 group">
+            <Link to="/" className="inline-flex items-center gap-2 group shrink-0">
               <span className="text-sm font-black text-neutral-900 tracking-wider font-mono">
                 校园闲置交易
               </span>
             </Link>
 
+            {/* Global search entry */}
+            <form onSubmit={handleNavSearch} className="hidden sm:block relative flex-1 max-w-[220px]">
+              <input
+                type="search"
+                value={navSearch}
+                onChange={e => setNavSearch(e.target.value)}
+                placeholder="搜闲置…"
+                className="w-full pl-8 pr-3 py-1.5 border border-primary-faint rounded-lg text-xs font-semibold text-neutral-800 placeholder:text-neutral-400 focus:outline-hidden focus:border-primary"
+                aria-label="搜索商品"
+              />
+              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-neutral-400 pointer-events-none" />
+            </form>
+
             {/* Nav links */}
-            <nav className="flex items-center gap-5 md:gap-7">
+            <nav className="flex items-center gap-5 md:gap-7 shrink-0">
               <Link to="/" className={linkClass('/')}>
                 <span className="hidden sm:inline">首页</span>
                 <span className="sm:hidden"><Home className="h-4 w-4" /></span>

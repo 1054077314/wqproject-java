@@ -13,3 +13,5 @@ pagehelper:
 
 app:
   media-root: ./target/test-media
+  rate-limit-login-per-minute: 1000
+  rate-limit-register-per-minute: 1000

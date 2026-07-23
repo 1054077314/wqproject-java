@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,7 +24,9 @@ public class AuditController {
 
     @GetMapping("/admin/audit-logs/")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<PageResult<AuditLogVo>>> list(HttpServletRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(auditService.list(request)));
+    public ResponseEntity<ApiResponse<PageResult<AuditLogVo>>> list(
+            HttpServletRequest request,
+            @RequestParam(value = "action", required = false) String action) {
+        return ResponseEntity.ok(ApiResponse.ok(auditService.list(request, action)));
     }
 }

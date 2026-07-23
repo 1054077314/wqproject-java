@@ -50,9 +50,10 @@ public class AuditService {
         }
     }
 
-    public PageResult<AuditLogVo> list(HttpServletRequest request) {
+    public PageResult<AuditLogVo> list(HttpServletRequest request, String action) {
+        String filter = (action == null || action.isBlank()) ? null : action.trim();
         return PageUtils.paginateMapped(request, appProperties.getPageSize(),
-                auditLogMapper::findRecent,
+                () -> auditLogMapper.findRecent(filter),
                 rows -> rows.stream().map(this::toVo).collect(Collectors.toList()));
     }
 

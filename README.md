@@ -20,7 +20,7 @@
 
 **用户端：**
 - 注册 / 登录 / 登出
-- 商品列表（分类筛选、分页）
+- 商品列表（分类筛选、关键词搜索、分页）
 - 商品详情（图片轮播、评论列表）
 - 发布商品（多图上传、分类选择）
 - 收藏 / 取消收藏（Toggle 设计）
@@ -130,6 +130,19 @@ npm run dev
 
 前端运行在 `http://localhost:5173`。
 
+## 演示剧本（约 3 分钟）
+
+演示账号：`admin` / `admin1234`，`student1` / `student1234`（或任意 `student*`）。
+
+1. **搜到货** — 打开首页或顶栏搜索框，输入关键词（如「键盘」）→ 进入闲置大厅 `?search=`。
+2. **卖家上架** — `student1` 登录 → 发布商品 → 状态为待审核。
+3. **管理员审核** — `admin` 登录后台 →「商品审核管理」→ 通过；到「操作审计留痕」可筛 `审核通过`。
+4. **双人预约** — 再用两个买家账号（或另开无痕窗口）对同一商品发起预约。
+5. **确认成交** — 卖家在个人中心「我作为卖家的预约」点确认 → 商品变为 `sold`，另一笔 pending 自动拒绝；重复确认会返回 **409**。
+6. **审计追溯** — 后台「操作审计留痕」筛选「确认成交」，可见责任人与 `product_id`。
+
+并发验证（开发机）：`mvn -Dtest=ConcurrentConfirmApiTest test`（两预约同时 confirm，恰好一成一败）。
+
 ### 生产构建
 
 ```bash
@@ -162,7 +175,7 @@ mvn -DskipTests package   # 输出 target/campus-share-1.0.0.jar
 
 | 方法 | 路径 | 认证 | 说明 |
 |------|------|------|------|
-| GET | `/api/products/` | 无 | 商品列表（支持 `?category_id=` 筛选） |
+| GET | `/api/products/` | 无 | 商品列表（`?category_id=`、`?search=` 标题/描述模糊搜，可分页） |
 | POST | `/api/products/` | 需要 | 发布商品（JSON 或 multipart） |
 | GET | `/api/products/{id}/` | 无 | 商品详情 |
 | PUT | `/api/products/{id}/` | 需要（仅卖家） | 修改商品 |
@@ -209,6 +222,7 @@ mvn -DskipTests package   # 输出 target/campus-share-1.0.0.jar
 | PUT/DELETE | `/api/admin/categories/{id}/` | 修改/删除分类 |
 | GET | `/api/admin/pending-products/` | 待审核商品列表 |
 | POST | `/api/admin/products/{id}/review/` | 审核商品（通过/驳回） |
+| GET | `/api/admin/audit-logs/` | 操作审计（分页；`?action=` 如 `appointment.confirm`） |
 
 ## 数据库设计
 
@@ -255,7 +269,7 @@ categories (分类)
 - 图片软删时同步清理磁盘文件；收藏列表仅展示在售商品
 - 分类列表与统计看板使用 **Caffeine** 本地短缓存（5 分钟 TTL，写路径 `@CacheEvict` 主动失效）
 - 暴露 `/actuator/health`、`/actuator/prometheus` 供探活与指标采集；HikariCP 连接池可配置
-- 管理员可查审计：`GET /api/admin/audit-logs/`（后台「操作审计留痕」页）
+- 管理员可查审计：`GET /api/admin/audit-logs/`（`?action=` 筛选 + `page`/`page_size`；后台「操作审计留痕」页）
 - 演示数据：`db/data/V5__enrich_demo_data.sql` 扩充用户/商品状态分布（含今日新增、sold/pending/offline）；账号仍为 `admin/admin1234`、`student*/student1234`。**已有库需重启应用让 Flyway 跑 V5**（或重建库）。
 
 ## 本地 Docker（可选）
