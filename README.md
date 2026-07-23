@@ -7,12 +7,14 @@
 | 层 | 技术 |
 |---|------|
 | 前端 | React 19 + TypeScript + Vite 6 + Tailwind CSS 4 + React Router 7 |
-| 后端 | Spring Boot 3.3.5 + MyBatis + Spring Security + PageHelper |
+| 后端 | Spring Boot 3.3.5 + MyBatis + Spring Security + PageHelper + Actuator |
+| 缓存 | Caffeine（默认）；可选 Redis 分布式锁（`redis` profile） |
 | 数据库 | MySQL（默认）/ H2（可选 profile） |
 | 数据库脚本 | Flyway（自动建表 + 初始化数据） |
 | 图片存储 | 本地文件系统（`media/`） |
 | 认证 | 自定义 Bearer Token（7 天有效期） |
 | 包管理 | 后端 Maven，前端 npm |
+| 工程化 | Dockerfile、GitHub Actions CI、deploy/ 部署脚本、springdoc OpenAPI |
 
 ## 功能概览
 
@@ -37,6 +39,9 @@
 ```
 campus-share/
 ├── pom.xml                         # Maven / Spring Boot API
+├── Dockerfile                      # 多阶段构建后端镜像
+├── .github/workflows/ci.yml        # PR/push 自动测后端 + 构建前端
+├── deploy/                         # ECS 部署脚本与 Nginx/systemd 示例
 ├── src/
 │   ├── main/
 │   │   ├── java/com/campus/
@@ -228,8 +233,11 @@ users (用户)
 ├── appointments (预约)      ← unique(buyer, product)
 │   └── id, buyer_id(FK), product_id(FK), status(pending/confirmed/rejected/cancelled), created_at, updated_at
 │
-└── comments (评论)
-    └── id, user_id(FK), product_id(FK), content, created_at
+├── comments (评论)
+│   └── id, user_id(FK), product_id(FK), content, created_at
+│
+└── audit_logs (审计)        ← 审核/成交/下架/启停用户等敏感操作留痕
+    └── id, actor_id, actor_username, action, resource_type, resource_id, detail, created_at
 
 categories (分类)
 └── id, name, sort_order, created_at
@@ -241,9 +249,24 @@ categories (分类)
 - 收藏和预约均有唯一约束，防止重复操作；预约取消/拒绝后可重开同一商品
 - 商品状态流转：`pending` → `active` → `sold`（确认预约成交）/ `offline`（下架）；审核可 `rejected`
 - 预约状态：`pending` → `confirmed`（同时商品 sold、其余 pending 自动 rejected）/ `rejected` / `cancelled`；`confirmed` 后不可取消
-- 写操作使用 CAS（`UPDATE … WHERE status=期望值`），冲突返回 409
+- 写操作使用 CAS（`UPDATE … WHERE status=期望值`），冲突返回 409；多实例可启用 `redis` profile，成交确认走 Redis SET NX 分布式锁 + CAS
 - 登录/注册接口按 IP 限流（`app.rate-limit-login-per-minute` / `app.rate-limit-register-per-minute`）
 - 图片软删时同步清理磁盘文件；收藏列表仅展示在售商品
+- 分类列表与统计看板使用 **Caffeine** 本地短缓存（5 分钟 TTL，写路径 `@CacheEvict` 主动失效）
+- 暴露 `/actuator/health`、`/actuator/prometheus` 供探活与指标采集；HikariCP 连接池可配置
+- 管理员可查审计：`GET /api/admin/audit-logs/`
+- 演示数据：`db/data/V5__enrich_demo_data.sql` 扩充用户/商品状态分布（含今日新增、sold/pending/offline）；账号仍为 `admin/admin1234`、`student*/student1234`。**已有库需重启应用让 Flyway 跑 V5**（或重建库）。
+
+## 本地 Docker（可选）
+
+```bash
+# 仅基础设施
+docker compose up -d mysql redis
+
+# 或连同应用一起（需本机 Docker）
+docker compose --profile full up -d --build
+# 应用 profile: mysql,redis
+```
 
 ## 生产部署
 
@@ -251,14 +274,19 @@ categories (分类)
 
 - `deploy/deploy.sh`：构建后端 Jar、构建 React 前端、上传 ECS、备份旧版本、重启服务
 - `deploy/campus-share.service.example`：systemd 托管 Spring Boot Jar
-- `deploy/nginx-campus-share.conf.example`：Nginx 静态资源分发与 `/api/`、`/media/` 反向代理
+- `deploy/nginx-campus-share.conf.example`：Nginx 静态资源分发、反代与安全响应头（适合公网 IP、无域名）
+- `deploy/nginx-campus-share-tls-selfsigned.conf.example`：无域名时的自签 HTTPS 示例（浏览器会告警；有域名后再换 Let's Encrypt）
 - `deploy/campus-share.env.example`：生产环境变量模板（不提交真实密码）
 
-生产目录约定为 `/opt/campus-share`，Spring Boot 运行在 `8085`，Nginx 监听 `80` 并将 `/api/`、`/media/` 反向代理到后端，React 构建产物由 `/` 静态分发。后端通过 `systemd` 托管，支持开机自启、异常重启和日志落盘。
+生产目录约定为 `/opt/campus-share`，Spring Boot 运行在 `8085`，Nginx 监听 `80`（可选 `443` 自签）并将 `/api/`、`/media/` 反向代理到后端，React 构建产物由 `/` 静态分发。后端通过 `systemd` 托管。
+
+本地/演示文档：`http://<host>:8085/swagger-ui.html`（经 Nginx 也可反代 `/swagger-ui/`）。
 
 ```bash
 DEPLOY_HOST=root@120.26.174.97 bash deploy/deploy.sh
 ```
+
+> 没有域名时：用公网 IP + HTTP（已加安全头）即可演示；需要锁小锁图标时用自签证书。正式对外信任证书需要域名才能用 Let's Encrypt。
 
 ## 许可证
 

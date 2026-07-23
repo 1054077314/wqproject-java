@@ -1,9 +1,11 @@
 package com.campus.user.service;
 
+import com.campus.audit.service.AuditService;
 import com.campus.common.BusinessException;
 import com.campus.common.PageResult;
 import com.campus.common.PageUtils;
 import com.campus.config.AppProperties;
+import com.campus.config.CacheConfig;
 import com.campus.product.mapper.ProductMapper;
 import com.campus.security.TokenHasher;
 import com.campus.security.UserPrincipal;
@@ -15,6 +17,8 @@ import com.campus.user.entity.User;
 import com.campus.user.mapper.TokenMapper;
 import com.campus.user.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,17 +38,20 @@ public class AuthService {
     private final ProductMapper productMapper;
     private final PasswordEncoder passwordEncoder;
     private final AppProperties appProperties;
+    private final AuditService auditService;
 
     public AuthService(UserMapper userMapper, TokenMapper tokenMapper, ProductMapper productMapper,
-                       PasswordEncoder passwordEncoder, AppProperties appProperties) {
+                       PasswordEncoder passwordEncoder, AppProperties appProperties, AuditService auditService) {
         this.userMapper = userMapper;
         this.tokenMapper = tokenMapper;
         this.productMapper = productMapper;
         this.passwordEncoder = passwordEncoder;
         this.appProperties = appProperties;
+        this.auditService = auditService;
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.STATISTICS, allEntries = true)
     public Map<String, Object> register(RegisterRequest request) {
         if (userMapper.findByUsername(request.getUsername()) != null) {
             throw new BusinessException(409, "用户名已存在");
@@ -120,9 +127,11 @@ public class AuthService {
             // Force logout everywhere when account is disabled.
             tokenMapper.deleteByUserId(id);
         }
+        auditService.record(current, active ? "user.enable" : "user.disable", "user", id, user.getUsername());
         return toView(user);
     }
 
+    @Cacheable(cacheNames = CacheConfig.STATISTICS, key = "'dashboard'")
     public Map<String, Object> statistics() {
         Map<String, Object> data = new HashMap<>();
         data.put("total_users", userMapper.countAll());

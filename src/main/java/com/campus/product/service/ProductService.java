@@ -1,6 +1,7 @@
 package com.campus.product.service;
 
 import com.campus.appointment.mapper.AppointmentMapper;
+import com.campus.audit.service.AuditService;
 import com.campus.category.mapper.CategoryMapper;
 import com.campus.comment.mapper.CommentMapper;
 import com.campus.comment.vo.CommentVo;
@@ -8,6 +9,7 @@ import com.campus.common.BusinessException;
 import com.campus.common.PageResult;
 import com.campus.common.PageUtils;
 import com.campus.config.AppProperties;
+import com.campus.config.CacheConfig;
 import com.campus.favorite.mapper.FavoriteMapper;
 import com.campus.product.dto.ProductCreateRequest;
 import com.campus.product.dto.ProductReviewRequest;
@@ -23,6 +25,7 @@ import com.campus.product.vo.ProductListItemVo;
 import com.campus.product.vo.ProductPayloadVo;
 import com.campus.security.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,11 +50,13 @@ public class ProductService {
     private final CommentMapper commentMapper;
     private final FileStorageService fileStorageService;
     private final AppProperties appProperties;
+    private final AuditService auditService;
 
     public ProductService(ProductMapper productMapper, ProductImageMapper productImageMapper,
                           CategoryMapper categoryMapper, AppointmentMapper appointmentMapper,
                           FavoriteMapper favoriteMapper, CommentMapper commentMapper,
-                          FileStorageService fileStorageService, AppProperties appProperties) {
+                          FileStorageService fileStorageService, AppProperties appProperties,
+                          AuditService auditService) {
         this.productMapper = productMapper;
         this.productImageMapper = productImageMapper;
         this.categoryMapper = categoryMapper;
@@ -60,6 +65,7 @@ public class ProductService {
         this.commentMapper = commentMapper;
         this.fileStorageService = fileStorageService;
         this.appProperties = appProperties;
+        this.auditService = auditService;
     }
 
     public PageResult<ProductListItemVo> listActive(HttpServletRequest request, Long categoryId, String search) {
@@ -104,6 +110,7 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.STATISTICS, allEntries = true)
     public ProductPayloadVo create(ProductCreateRequest request, List<MultipartFile> files, UserPrincipal principal) {
         if (categoryMapper.findById(request.getCategory()) == null) {
             throw new BusinessException(400, "分类不存在");
@@ -126,6 +133,7 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.STATISTICS, allEntries = true)
     public ProductPayloadVo update(Long id, ProductUpdateRequest request, List<MultipartFile> files, UserPrincipal principal) {
         Product product = requireProduct(id);
         if (!product.getSellerId().equals(principal.getId())) {
@@ -189,6 +197,7 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.STATISTICS, allEntries = true)
     public void offline(Long id, UserPrincipal principal) {
         Product product = requireProduct(id);
         if (!product.getSellerId().equals(principal.getId())) {
@@ -200,6 +209,7 @@ public class ProductService {
         if (productMapper.casStatus(id, "active", "offline", product.getRejectReason()) == 0) {
             throw new BusinessException(409, "仅在售商品可下架，或状态已变更");
         }
+        auditService.record(principal, "product.offline", "product", id, null);
     }
 
     public PageResult<MyProductVo> myProducts(HttpServletRequest request, String status, UserPrincipal principal) {
@@ -232,12 +242,14 @@ public class ProductService {
     }
 
     @Transactional
-    public void review(Long id, ProductReviewRequest request) {
+    @CacheEvict(cacheNames = CacheConfig.STATISTICS, allEntries = true)
+    public void review(Long id, ProductReviewRequest request, UserPrincipal principal) {
         Product product = requireProduct(id);
         if ("approve".equals(request.getAction())) {
             if (productMapper.casStatus(id, "pending", "active", "") == 0) {
                 throw new BusinessException(409, "只能审核待审核商品，或状态已变更");
             }
+            auditService.record(principal, "product.approve", "product", id, null);
             return;
         }
         if ("reject".equals(request.getAction())) {
@@ -248,6 +260,7 @@ public class ProductService {
             if (productMapper.casStatus(id, "pending", "rejected", reason) == 0) {
                 throw new BusinessException(409, "只能审核待审核商品，或状态已变更");
             }
+            auditService.record(principal, "product.reject", "product", id, reason);
             return;
         }
         throw new BusinessException(400, "无效操作");

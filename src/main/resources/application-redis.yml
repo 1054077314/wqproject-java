@@ -1,0 +1,7 @@
+# Activate with: SPRING_PROFILES_ACTIVE=mysql,redis
+# Provides Redis SET NX distributed lock for multi-instance deal confirmation.
+
+app:
+  redis:
+    host: ${REDIS_HOST:127.0.0.1}
+    port: ${REDIS_PORT:6379}

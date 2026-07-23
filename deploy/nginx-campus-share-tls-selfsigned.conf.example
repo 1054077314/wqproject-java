@@ -1,18 +1,36 @@
-# No-domain / IP-only deployment (HTTP + security headers).
-# For optional self-signed HTTPS on a public IP, see nginx-campus-share-tls-selfsigned.conf.example
+# Optional self-signed TLS for public IP (NO domain / no Let's Encrypt).
+# Browsers will warn — acceptable for demos, not for public trust.
+#
+# Generate once on ECS:
+#   sudo openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+#     -keyout /etc/nginx/ssl/campus-share.key \
+#     -out /etc/nginx/ssl/campus-share.crt \
+#     -subj "/CN=120.26.174.97"
+#
+# Then include this file (or merge into sites-enabled) and reload nginx.
 
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
     server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/ssl/campus-share.crt;
+    ssl_certificate_key /etc/nginx/ssl/campus-share.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
 
     client_max_body_size 20m;
 
-    # Harden responses even without HTTPS / domain
+    add_header Strict-Transport-Security "max-age=31536000" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
 
     location /api/ {
         proxy_pass http://127.0.0.1:8085;
@@ -20,7 +38,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto https;
     }
 
     location /media/ {
@@ -29,20 +47,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Optional: expose Swagger only on private network / via SSH tunnel in production
-    location /swagger-ui/ {
-        proxy_pass http://127.0.0.1:8085;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /v3/api-docs {
-        proxy_pass http://127.0.0.1:8085;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
     }
 
     location / {

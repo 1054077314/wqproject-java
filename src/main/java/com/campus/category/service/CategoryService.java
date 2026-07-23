@@ -4,7 +4,10 @@ import com.campus.category.dto.CategoryRequest;
 import com.campus.category.entity.Category;
 import com.campus.category.mapper.CategoryMapper;
 import com.campus.common.BusinessException;
+import com.campus.config.CacheConfig;
 import com.campus.product.mapper.ProductMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +29,7 @@ public class CategoryService {
         this.productMapper = productMapper;
     }
 
+    @Cacheable(cacheNames = CacheConfig.CATEGORIES, key = "'simple'")
     public List<Map<String, Object>> listSimple() {
         return categoryMapper.findAll().stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
@@ -35,11 +39,13 @@ public class CategoryService {
         }).collect(Collectors.toList());
     }
 
+    @Cacheable(cacheNames = CacheConfig.CATEGORIES, key = "'all'")
     public List<Category> listAll() {
         return categoryMapper.findAll();
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.CATEGORIES, CacheConfig.STATISTICS}, allEntries = true)
     public Category create(CategoryRequest request) {
         Category category = new Category();
         category.setName(request.getName().trim());
@@ -54,6 +60,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.CATEGORIES, CacheConfig.STATISTICS}, allEntries = true)
     public Category update(Long id, CategoryRequest request) {
         Category category = categoryMapper.findById(id);
         if (category == null) {
@@ -78,6 +85,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheConfig.CATEGORIES, CacheConfig.STATISTICS}, allEntries = true)
     public void delete(Long id) {
         Category category = categoryMapper.findById(id);
         if (category == null) {

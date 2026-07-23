@@ -96,7 +96,7 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> review(@PathVariable Long id,
                                                     @Valid @RequestBody ProductReviewRequest request) {
-        productService.review(id, request);
+        productService.review(id, request, SecurityUtils.requireUser());
         String msg = "approve".equals(request.getAction()) ? "审核通过" : "已驳回";
         return ResponseEntity.ok(ApiResponse.ok(msg, null));
     }

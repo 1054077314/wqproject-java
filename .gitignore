@@ -1,5 +1,5 @@
 target/
-data/
+/data/
 media/
 .tools/
 frontend/node_modules/

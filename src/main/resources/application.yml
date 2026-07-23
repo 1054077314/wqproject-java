@@ -6,6 +6,10 @@ spring:
     name: campus-share
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:mysql}
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   jackson:
     property-naming-strategy: SNAKE_CASE
     serialization:
@@ -38,6 +42,36 @@ app:
   cors-allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   rate-limit-login-per-minute: ${RATE_LIMIT_LOGIN:20}
   rate-limit-register-per-minute: ${RATE_LIMIT_REGISTER:10}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - prometheus
+          - metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
 
 logging:
   level:

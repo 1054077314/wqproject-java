@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @ConfigurationPropertiesScan
-@MapperScan("com.campus")
+@MapperScan(basePackages = "com.campus", annotationClass = org.apache.ibatis.annotations.Mapper.class)
 @EnableScheduling
 public class CampusShareApplication {
 

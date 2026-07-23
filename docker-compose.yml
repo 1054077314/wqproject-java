@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:123456}
+      MYSQL_DATABASE: campus_share
+    ports:
+      - "3306:3306"
+    volumes:
+      - campus-mysql:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_PASSWORD:123456}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    profiles:
+      - full
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql,redis
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: campus_share
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:123456}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MEDIA_ROOT: /app/media
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "8085:8085"
+    volumes:
+      - campus-media:/app/media
+
+volumes:
+  campus-mysql:
+  campus-media:

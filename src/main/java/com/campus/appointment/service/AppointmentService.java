@@ -3,17 +3,22 @@ package com.campus.appointment.service;
 import com.campus.appointment.entity.Appointment;
 import com.campus.appointment.mapper.AppointmentMapper;
 import com.campus.appointment.vo.AppointmentVo;
+import com.campus.audit.service.AuditService;
 import com.campus.common.BusinessException;
 import com.campus.common.PageResult;
 import com.campus.common.PageUtils;
 import com.campus.config.AppProperties;
+import com.campus.config.CacheConfig;
+import com.campus.lock.DistributedLock;
 import com.campus.product.entity.Product;
 import com.campus.product.mapper.ProductMapper;
 import com.campus.security.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
@@ -23,15 +28,26 @@ public class AppointmentService {
     private final AppointmentMapper appointmentMapper;
     private final ProductMapper productMapper;
     private final AppProperties appProperties;
+    private final DistributedLock distributedLock;
+    private final TransactionTemplate transactionTemplate;
+    private final AuditService auditService;
 
-    public AppointmentService(AppointmentMapper appointmentMapper, ProductMapper productMapper, AppProperties appProperties) {
+    public AppointmentService(AppointmentMapper appointmentMapper, ProductMapper productMapper,
+                              AppProperties appProperties, DistributedLock distributedLock,
+                              TransactionTemplate transactionTemplate, AuditService auditService) {
         this.appointmentMapper = appointmentMapper;
         this.productMapper = productMapper;
         this.appProperties = appProperties;
+        this.distributedLock = distributedLock;
+        this.transactionTemplate = transactionTemplate;
+        this.auditService = auditService;
     }
 
-    @Transactional
     public AppointmentVo create(Long productId, UserPrincipal principal) {
+        return transactionTemplate.execute(status -> createInTx(productId, principal));
+    }
+
+    private AppointmentVo createInTx(Long productId, UserPrincipal principal) {
         Product product = productMapper.findById(productId);
         if (product == null) {
             throw new BusinessException(404, "商品不存在");
@@ -48,8 +64,8 @@ public class AppointmentService {
 
         Appointment existing = appointmentMapper.findByBuyerAndProduct(principal.getId(), productId);
         if (existing != null) {
-            String status = existing.getStatus();
-            if ("pending".equals(status) || "confirmed".equals(status)) {
+            String st = existing.getStatus();
+            if ("pending".equals(st) || "confirmed".equals(st)) {
                 throw new BusinessException(409, "已预约");
             }
             LocalDateTime now = LocalDateTime.now();
@@ -83,7 +99,7 @@ public class AppointmentService {
                 appointmentMapper.findBySeller(principal.getId()).stream().map(this::toVo).collect(Collectors.toList()));
     }
 
-    @Transactional
+    @CacheEvict(cacheNames = CacheConfig.STATISTICS, allEntries = true)
     public AppointmentVo updateStatus(Long id, String action, UserPrincipal principal) {
         Appointment appointment = appointmentMapper.findById(id);
         if (appointment == null) {
@@ -91,7 +107,9 @@ public class AppointmentService {
         }
 
         if ("cancel".equals(action)) {
-            return cancelByBuyer(appointment, principal);
+            AppointmentVo vo = transactionTemplate.execute(status -> cancelByBuyer(appointment, principal));
+            auditService.record(principal, "appointment.cancel", "appointment", id, null);
+            return vo;
         }
 
         Product product = productMapper.findById(appointment.getProductId());
@@ -102,20 +120,36 @@ public class AppointmentService {
             throw new BusinessException(400, "无效操作");
         }
 
+        // Multi-instance: lock product deal key, then CAS inside one TX.
+        if ("confirm".equals(action)) {
+            AppointmentVo vo = distributedLock.execute(
+                    "product:deal:" + product.getId(),
+                    Duration.ofSeconds(15),
+                    () -> transactionTemplate.execute(status -> confirmOrReject(id, action, principal)));
+            auditService.record(principal, "appointment.confirm", "appointment", id,
+                    "product_id=" + product.getId() + ",sold=true");
+            return vo;
+        }
+
+        AppointmentVo vo = transactionTemplate.execute(status -> confirmOrReject(id, action, principal));
+        auditService.record(principal, "appointment.reject", "appointment", id,
+                "product_id=" + product.getId());
+        return vo;
+    }
+
+    private AppointmentVo confirmOrReject(Long id, String action, UserPrincipal principal) {
         LocalDateTime now = LocalDateTime.now();
         String newStatus = "confirm".equals(action) ? "confirmed" : "rejected";
         if (appointmentMapper.casStatus(id, "pending", newStatus, now) == 0) {
             throw new BusinessException(409, "该预约已被处理");
         }
-
         if ("confirm".equals(action)) {
-            // Confirm = deal locked: product active→sold, competing pending→rejected (same TX).
-            if (productMapper.casStatus(product.getId(), "active", "sold", "") == 0) {
+            Appointment latest = appointmentMapper.findById(id);
+            if (productMapper.casStatus(latest.getProductId(), "active", "sold", "") == 0) {
                 throw new BusinessException(409, "商品状态已变更，无法确认成交");
             }
-            appointmentMapper.rejectOtherPending(product.getId(), id, now);
+            appointmentMapper.rejectOtherPending(latest.getProductId(), id, now);
         }
-
         return toVo(appointmentMapper.findById(id));
     }
 
@@ -123,7 +157,6 @@ public class AppointmentService {
         if (!appointment.getBuyerId().equals(principal.getId())) {
             throw new BusinessException(403, "只能取消自己的预约");
         }
-        // Confirmed means deal locked — cancel only allowed while pending.
         if (appointmentMapper.casStatus(appointment.getId(), "pending", "cancelled", LocalDateTime.now()) == 0) {
             throw new BusinessException(400, "当前状态不可取消");
         }
