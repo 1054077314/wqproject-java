@@ -55,7 +55,7 @@ export default function Home() {
         </div>
 
         <h1 className="text-3xl md:text-5xl font-black tracking-tight text-neutral-900 leading-tight">
-          极简主义的校园二手流转。
+          极简主义的校园二手平台。
         </h1>
         <p className="mt-4 text-xs md:text-sm text-neutral-500 max-w-lg leading-relaxed font-semibold">
           专为在校本校学子打造的精简闲置流转大厅。让每本书教材、数码电子、日常生活器具安全回归到需要它的人手中，零平台佣金，线下实名面交。
