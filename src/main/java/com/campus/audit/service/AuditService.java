@@ -51,8 +51,9 @@ public class AuditService {
     }
 
     public PageResult<AuditLogVo> list(HttpServletRequest request) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                auditLogMapper.findRecent().stream().map(this::toVo).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                auditLogMapper::findRecent,
+                rows -> rows.stream().map(this::toVo).collect(Collectors.toList()));
     }
 
     private AuditLogVo toVo(AuditLog a) {

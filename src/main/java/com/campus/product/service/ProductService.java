@@ -69,8 +69,9 @@ public class ProductService {
     }
 
     public PageResult<ProductListItemVo> listActive(HttpServletRequest request, Long categoryId, String search) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                productMapper.findActive(categoryId, search).stream().map(this::toListItem).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                () -> productMapper.findActive(categoryId, search),
+                rows -> rows.stream().map(this::toListItem).collect(Collectors.toList()));
     }
 
     public ProductDetailVo detail(Long id, UserPrincipal principal) {
@@ -213,11 +214,12 @@ public class ProductService {
     }
 
     public PageResult<MyProductVo> myProducts(HttpServletRequest request, String status, UserPrincipal principal) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () -> {
-            List<Product> products = productMapper.findBySeller(principal.getId(), status);
-            Map<Long, List<ProductImage>> imagesByProduct = loadImagesGrouped(
-                    products.stream().map(Product::getId).collect(Collectors.toList()));
-            return products.stream().map(p -> {
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                () -> productMapper.findBySeller(principal.getId(), status),
+                products -> {
+                    Map<Long, List<ProductImage>> imagesByProduct = loadImagesGrouped(
+                            products.stream().map(Product::getId).collect(Collectors.toList()));
+                    return products.stream().map(p -> {
                 MyProductVo vo = new MyProductVo();
                 vo.setId(p.getId());
                 vo.setTitle(p.getTitle());
@@ -267,8 +269,9 @@ public class ProductService {
     }
 
     public PageResult<ProductListItemVo> pendingList(HttpServletRequest request) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                productMapper.findPending().stream().map(this::toListItem).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                productMapper::findPending,
+                rows -> rows.stream().map(this::toListItem).collect(Collectors.toList()));
     }
 
     private void saveImages(Long productId, List<MultipartFile> files, List<String> base64List) {

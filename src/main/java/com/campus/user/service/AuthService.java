@@ -108,8 +108,9 @@ public class AuthService {
     }
 
     public PageResult<UserView> listUsers(HttpServletRequest request) {
-        return PageUtils.paginate(request, 10, () ->
-                userMapper.findAllOrderByCreatedAtDesc().stream().map(this::toView).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, 10,
+                userMapper::findAllOrderByCreatedAtDesc,
+                rows -> rows.stream().map(this::toView).collect(Collectors.toList()));
     }
 
     @Transactional

@@ -6,6 +6,7 @@ import com.github.pagehelper.PageInfo;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public final class PageUtils {
@@ -14,11 +15,17 @@ public final class PageUtils {
     }
 
     public static <T> PageResult<T> paginate(HttpServletRequest request, int defaultPageSize, Supplier<List<T>> query) {
+        return paginateMapped(request, defaultPageSize, query, Function.identity());
+    }
+
+    public static <S, T> PageResult<T> paginateMapped(HttpServletRequest request, int defaultPageSize,
+                                                       Supplier<List<S>> query, Function<List<S>, List<T>> mapper) {
         int page = parseInt(request.getParameter("page"), 1);
         int pageSize = parseInt(request.getParameter("page_size"), defaultPageSize);
         PageHelper.startPage(page, pageSize);
-        List<T> list = query.get();
-        PageInfo<T> info = new PageInfo<>(list);
+        List<S> rows = query.get();
+        PageInfo<S> info = new PageInfo<>(rows);
+        List<T> list = mapper.apply(rows);
         String base = request.getRequestURL().toString();
         String queryString = request.getQueryString();
         String next = null;

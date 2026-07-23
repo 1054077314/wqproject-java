@@ -50,8 +50,9 @@ public class CommentService {
         if (productMapper.findById(productId) == null) {
             throw new BusinessException(404, "商品不存在");
         }
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                commentMapper.findByProductId(productId).stream().map(this::toVo).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                () -> commentMapper.findByProductId(productId),
+                rows -> rows.stream().map(this::toVo).collect(Collectors.toList()));
     }
 
     private CommentVo toVo(Comment c) {

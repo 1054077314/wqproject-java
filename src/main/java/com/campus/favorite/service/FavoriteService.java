@@ -78,8 +78,9 @@ public class FavoriteService {
     }
 
     public PageResult<FavoriteVo> myFavorites(HttpServletRequest request, UserPrincipal principal) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                favoriteMapper.findByUser(principal.getId()).stream().map(this::toVo).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                () -> favoriteMapper.findByUser(principal.getId()),
+                rows -> rows.stream().map(this::toVo).collect(Collectors.toList()));
     }
 
     private Favorite enrich(Favorite f) {

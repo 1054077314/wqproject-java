@@ -90,13 +90,15 @@ public class AppointmentService {
     }
 
     public PageResult<AppointmentVo> asBuyer(HttpServletRequest request, UserPrincipal principal) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                appointmentMapper.findByBuyer(principal.getId()).stream().map(this::toVo).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                () -> appointmentMapper.findByBuyer(principal.getId()),
+                rows -> rows.stream().map(this::toVo).collect(Collectors.toList()));
     }
 
     public PageResult<AppointmentVo> asSeller(HttpServletRequest request, UserPrincipal principal) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                appointmentMapper.findBySeller(principal.getId()).stream().map(this::toVo).collect(Collectors.toList()));
+        return PageUtils.paginateMapped(request, appProperties.getPageSize(),
+                () -> appointmentMapper.findBySeller(principal.getId()),
+                rows -> rows.stream().map(this::toVo).collect(Collectors.toList()));
     }
 
     @CacheEvict(cacheNames = CacheConfig.STATISTICS, allEntries = true)
