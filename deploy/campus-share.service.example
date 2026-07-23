@@ -1,0 +1,18 @@
+[Unit]
+Description=Campus Share Spring Boot Application
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/campus-share
+EnvironmentFile=/etc/campus-share/campus-share.env
+ExecStart=/bin/sh -c 'exec /usr/bin/java $JAVA_OPTS -jar /opt/campus-share/app/campus-share-1.0.0.jar'
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+StandardOutput=append:/opt/campus-share/logs/app.log
+StandardError=append:/opt/campus-share/logs/app.log
+
+[Install]
+WantedBy=multi-user.target

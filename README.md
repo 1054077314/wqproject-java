@@ -247,40 +247,17 @@ categories (分类)
 
 ## 生产部署
 
-可通过 Nginx 反向代理 Spring Boot + 前端静态资源：
+仓库提供了可复用部署脚本和示例配置，见 [`deploy/`](deploy/)：
 
-```nginx
-server {
-    listen 80;
+- `deploy/deploy.sh`：构建后端 Jar、构建 React 前端、上传 ECS、备份旧版本、重启服务
+- `deploy/campus-share.service.example`：systemd 托管 Spring Boot Jar
+- `deploy/nginx-campus-share.conf.example`：Nginx 静态资源分发与 `/api/`、`/media/` 反向代理
+- `deploy/campus-share.env.example`：生产环境变量模板（不提交真实密码）
 
-    # Spring Boot API
-    location /api/ {
-        proxy_pass http://127.0.0.1:8085;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    # 静态媒体文件
-    location /media/ {
-        proxy_pass http://127.0.0.1:8085;
-        # 或直接: alias /opt/campus-share/media/;
-    }
-
-    # React SPA 兜底
-    location / {
-        root /opt/campus-share/frontend/dist;
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-后端启动命令：
+生产目录约定为 `/opt/campus-share`，Spring Boot 运行在 `8085`，Nginx 监听 `80` 并将 `/api/`、`/media/` 反向代理到后端，React 构建产物由 `/` 静态分发。后端通过 `systemd` 托管，支持开机自启、异常重启和日志落盘。
 
 ```bash
-cd /opt/campus-share
-nohup java -jar target/campus-share-1.0.0.jar \
-  --spring.profiles.active=mysql \
-  > /opt/campus-share/app.log 2>&1 &
+DEPLOY_HOST=root@120.26.174.97 bash deploy/deploy.sh
 ```
 
 ## 许可证
