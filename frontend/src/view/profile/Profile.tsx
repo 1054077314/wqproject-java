@@ -38,12 +38,14 @@ const APPT_STATUS_MAP: Record<string, string> = {
   pending: '待确认',
   confirmed: '已确认',
   rejected: '已拒绝',
+  cancelled: '已取消',
 }
 
 const APPT_STATUS_COLOR: Record<string, string> = {
   pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
   confirmed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   rejected: 'bg-red-50 text-red-700 border-red-200',
+  cancelled: 'bg-primary-subtle text-neutral-500 border-primary-faint',
 }
 
 export default function Profile() {
@@ -63,7 +65,7 @@ export default function Profile() {
       const params: Record<string, string> = {}
       if (statusFilter) params.status = statusFilter
       const res: PaginatedRes<MyProduct> = await request.get('/my-products/', { params })
-      setProducts(res.results)
+      setProducts(res.data?.results ?? [])
     } catch {
       // ignore
     } finally {
@@ -75,7 +77,7 @@ export default function Profile() {
     setLoading(true)
     try {
       const res: PaginatedRes<AppointmentItem> = await request.get('/my-appointments/as-buyer/')
-      setBuyerAppts(res.results)
+      setBuyerAppts(res.data?.results ?? [])
     } catch {
       // ignore
     } finally {
@@ -87,7 +89,7 @@ export default function Profile() {
     setLoading(true)
     try {
       const res: PaginatedRes<AppointmentItem> = await request.get('/my-appointments/as-seller/')
-      setSellerAppts(res.results)
+      setSellerAppts(res.data?.results ?? [])
     } catch {
       // ignore
     } finally {
@@ -99,7 +101,7 @@ export default function Profile() {
     setLoading(true)
     try {
       const res: PaginatedRes<FavoriteItem> = await request.get('/my-favorites/')
-      setFavorites(res.results)
+      setFavorites(res.data?.results ?? [])
     } catch {
       // ignore
     } finally {
@@ -114,6 +116,16 @@ export default function Profile() {
       toast(action === 'confirm' ? '已确认预约' : '已拒绝预约', 'success')
     } catch (e: any) {
       toast(e?.message || '操作失败', 'error')
+    }
+  }
+
+  async function handleCancelAppt(id: number) {
+    try {
+      await request.patch(`/appointments/${id}/`, { action: 'cancel' })
+      setBuyerAppts(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled' } : a))
+      toast('已取消预约', 'success')
+    } catch (e: any) {
+      toast(e?.message || '取消失败', 'error')
     }
   }
 
@@ -284,6 +296,14 @@ export default function Profile() {
                         <span className={`inline-block px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase border rounded-md ${APPT_STATUS_COLOR[a.status] || 'bg-gray-100'}`}>
                           {APPT_STATUS_MAP[a.status] || a.status}
                         </span>
+                        {(a.status === 'pending') && (
+                          <button
+                            onClick={() => handleCancelAppt(a.id)}
+                            className="bg-white border border-primary-faint hover:border-red-500 hover:text-red-500 text-neutral-500 font-bold text-[10px] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          >
+                            取消
+                          </button>
+                        )}
                         <span className="text-[10px] font-mono text-neutral-500 font-medium">
                           {new Date(a.created_at).toLocaleString()}
                         </span>

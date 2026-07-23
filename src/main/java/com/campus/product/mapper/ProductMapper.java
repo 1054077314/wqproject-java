@@ -35,6 +35,16 @@ public interface ProductMapper {
     @Update("UPDATE products SET status = #{status}, reject_reason = #{rejectReason}, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}")
     int updateStatus(@Param("id") Long id, @Param("status") String status, @Param("rejectReason") String rejectReason);
 
+    /** Optimistic CAS for product status transitions. */
+    @Update("""
+            UPDATE products SET status = #{newStatus}, reject_reason = #{rejectReason}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = #{id} AND status = #{expectedStatus} AND is_deleted = FALSE
+            """)
+    int casStatus(@Param("id") Long id,
+                  @Param("expectedStatus") String expectedStatus,
+                  @Param("newStatus") String newStatus,
+                  @Param("rejectReason") String rejectReason);
+
     @Select("SELECT COUNT(*) FROM products WHERE is_deleted = FALSE")
     long countAll();
 

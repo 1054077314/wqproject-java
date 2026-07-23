@@ -10,10 +10,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
+
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
+    );
 
     private final AppProperties appProperties;
 
@@ -25,17 +31,18 @@ public class FileStorageService {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(400, "图片不能为空");
         }
-        String original = file.getOriginalFilename() == null ? "image.jpg" : file.getOriginalFilename();
-        String ext = original.contains(".") ? original.substring(original.lastIndexOf('.')) : ".jpg";
-        String filename = "products/" + UUID.randomUUID().toString().replace("-", "") + ext;
-        Path dest = Paths.get(appProperties.getMediaRoot()).resolve(filename).toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(dest.getParent());
-            file.transferTo(dest);
-        } catch (IOException e) {
-            throw new BusinessException(500, "图片保存失败");
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            throw new BusinessException(400, "仅支持 JPEG/PNG/GIF/WebP 图片");
         }
-        return filename.replace('\\', '/');
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new BusinessException(500, "图片读取失败");
+        }
+        String ext = detectExtension(bytes);
+        return writeBytes(bytes, ext);
     }
 
     public String storeBase64(String dataUrl) {
@@ -44,24 +51,20 @@ public class FileStorageService {
         }
         String meta = dataUrl.substring(0, dataUrl.indexOf(','));
         String base64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
-        String ext = ".jpg";
-        if (meta.contains("image/png")) {
-            ext = ".png";
-        } else if (meta.contains("image/webp")) {
-            ext = ".webp";
-        } else if (meta.contains("image/gif")) {
-            ext = ".gif";
-        }
-        byte[] bytes = Base64.getDecoder().decode(base64);
-        String filename = "products/" + UUID.randomUUID().toString().replace("-", "") + ext;
-        Path dest = Paths.get(appProperties.getMediaRoot()).resolve(filename).toAbsolutePath().normalize();
+        byte[] bytes;
         try {
-            Files.createDirectories(dest.getParent());
-            Files.write(dest, bytes);
-        } catch (IOException e) {
-            throw new BusinessException(500, "图片保存失败");
+            bytes = Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(400, "图片格式错误");
         }
-        return filename.replace('\\', '/');
+        if (meta.toLowerCase(Locale.ROOT).contains("image/")) {
+            boolean allowedMeta = ALLOWED_CONTENT_TYPES.stream().anyMatch(meta.toLowerCase(Locale.ROOT)::contains);
+            if (!allowedMeta) {
+                throw new BusinessException(400, "仅支持 JPEG/PNG/GIF/WebP 图片");
+            }
+        }
+        String ext = detectExtension(bytes);
+        return writeBytes(bytes, ext);
     }
 
     public String toUrl(String relativePath) {
@@ -76,5 +79,60 @@ public class FileStorageService {
             prefix = prefix + "/";
         }
         return prefix + relativePath;
+    }
+
+    /** Best-effort delete of a stored relative media path. */
+    public void deleteQuietly(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()
+                || relativePath.startsWith("http") || relativePath.startsWith("/")) {
+            return;
+        }
+        Path dest = Paths.get(appProperties.getMediaRoot()).resolve(relativePath).toAbsolutePath().normalize();
+        Path root = Paths.get(appProperties.getMediaRoot()).toAbsolutePath().normalize();
+        if (!dest.startsWith(root)) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(dest);
+        } catch (IOException ignored) {
+            // disk cleanup should not fail the business transaction
+        }
+    }
+
+    private String writeBytes(byte[] bytes, String ext) {
+        String filename = "products/" + UUID.randomUUID().toString().replace("-", "") + ext;
+        Path dest = Paths.get(appProperties.getMediaRoot()).resolve(filename).toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(dest.getParent());
+            Files.write(dest, bytes);
+        } catch (IOException e) {
+            throw new BusinessException(500, "图片保存失败");
+        }
+        return filename.replace('\\', '/');
+    }
+
+    /** Resolve extension from magic bytes, not client-supplied filename. */
+    static String detectExtension(byte[] bytes) {
+        if (bytes == null || bytes.length < 12) {
+            throw new BusinessException(400, "图片内容无效");
+        }
+        // JPEG
+        if ((bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8 && (bytes[2] & 0xFF) == 0xFF) {
+            return ".jpg";
+        }
+        // PNG
+        if ((bytes[0] & 0xFF) == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
+            return ".png";
+        }
+        // GIF
+        if (bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == '8') {
+            return ".gif";
+        }
+        // WEBP: RIFF....WEBP
+        if (bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') {
+            return ".webp";
+        }
+        throw new BusinessException(400, "不支持的图片格式");
     }
 }

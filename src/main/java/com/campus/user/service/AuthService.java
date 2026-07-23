@@ -5,6 +5,7 @@ import com.campus.common.PageResult;
 import com.campus.common.PageUtils;
 import com.campus.config.AppProperties;
 import com.campus.product.mapper.ProductMapper;
+import com.campus.security.TokenHasher;
 import com.campus.security.UserPrincipal;
 import com.campus.user.dto.LoginRequest;
 import com.campus.user.dto.RegisterRequest;
@@ -70,7 +71,8 @@ public class AuthService {
             throw new BusinessException(401, "用户名或密码错误");
         }
         Token token = new Token();
-        token.setKey(UUID.randomUUID().toString().replace("-", ""));
+        String rawToken = UUID.randomUUID().toString().replace("-", "");
+        token.setKey(TokenHasher.hash(rawToken));
         token.setUserId(user.getId());
         token.setCreatedAt(LocalDateTime.now());
         token.setExpiresAt(LocalDateTime.now().plusDays(appProperties.getTokenExpireDays()));
@@ -82,7 +84,7 @@ public class AuthService {
         userInfo.put("is_staff", user.isStaff());
 
         Map<String, Object> data = new HashMap<>();
-        data.put("token", token.getKey());
+        data.put("token", rawToken);
         data.put("user", userInfo);
         return data;
     }
@@ -114,6 +116,10 @@ public class AuthService {
         }
         userMapper.updateActive(id, active);
         user.setActive(active);
+        if (!active) {
+            // Force logout everywhere when account is disabled.
+            tokenMapper.deleteByUserId(id);
+        }
         return toView(user);
     }
 

@@ -52,8 +52,8 @@ public class AuthController {
 
     @GetMapping("/admin/users/")
     @PreAuthorize("hasRole('ADMIN')")
-    public PageResult<UserView> adminUsers(HttpServletRequest request) {
-        return authService.listUsers(request);
+    public ResponseEntity<ApiResponse<PageResult<UserView>>> adminUsers(HttpServletRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.listUsers(request)));
     }
 
     @PutMapping("/admin/users/{id}/")

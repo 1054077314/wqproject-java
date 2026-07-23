@@ -2,13 +2,14 @@ package com.campus.favorite.controller;
 
 import com.campus.common.ApiResponse;
 import com.campus.common.PageResult;
+import com.campus.favorite.dto.FavoriteToggleRequest;
 import com.campus.favorite.service.FavoriteService;
+import com.campus.favorite.vo.FavoriteVo;
 import com.campus.security.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -21,12 +22,13 @@ public class FavoriteController {
     }
 
     @PostMapping("/favorites/")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> toggle(@RequestBody Map<String, Long> body) {
-        return favoriteService.toggle(body.get("product_id"), SecurityUtils.requireUser());
+    public ResponseEntity<ApiResponse<FavoriteVo>> toggle(@Valid @RequestBody FavoriteToggleRequest request) {
+        return favoriteService.toggle(request.getProductId(), SecurityUtils.requireUser());
     }
 
     @GetMapping("/my-favorites/")
-    public PageResult<Map<String, Object>> myFavorites(HttpServletRequest request) {
-        return favoriteService.myFavorites(request, SecurityUtils.requireUser());
+    public ResponseEntity<ApiResponse<PageResult<FavoriteVo>>> myFavorites(HttpServletRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                favoriteService.myFavorites(request, SecurityUtils.requireUser())));
     }
 }

@@ -25,8 +25,8 @@ export default function Home() {
     async function fetchLatest() {
       try {
         const res = await request.get('/products/') as PaginatedRes<ProductListItem>
-        if (res && Array.isArray(res.results)) {
-          setLatestProducts(res.results.slice(0, 4))
+        if (res?.data && Array.isArray(res.data.results)) {
+          setLatestProducts(res.data.results.slice(0, 4))
         }
       } catch {
         // ignore

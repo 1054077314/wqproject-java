@@ -12,7 +12,7 @@ export default function UserManage() {
     setLoading(true)
     try {
       const res: PaginatedRes<AdminUser> = await request.get('/admin/users/')
-      setUsers(res.results)
+      setUsers(res.data?.results ?? [])
     } catch {
       // ignore
     } finally {

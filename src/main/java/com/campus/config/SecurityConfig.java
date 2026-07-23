@@ -1,5 +1,6 @@
 package com.campus.config;
 
+import com.campus.security.AuthRateLimitFilter;
 import com.campus.security.TokenAuthenticationFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,9 +32,15 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final TokenAuthenticationFilter tokenAuthenticationFilter;
+    private final AuthRateLimitFilter authRateLimitFilter;
+    private final AppProperties appProperties;
 
-    public SecurityConfig(TokenAuthenticationFilter tokenAuthenticationFilter) {
+    public SecurityConfig(TokenAuthenticationFilter tokenAuthenticationFilter,
+                          AuthRateLimitFilter authRateLimitFilter,
+                          AppProperties appProperties) {
         this.tokenAuthenticationFilter = tokenAuthenticationFilter;
+        this.authRateLimitFilter = authRateLimitFilter;
+        this.appProperties = appProperties;
     }
 
     @Bean
@@ -48,37 +55,20 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/home", "/login", "/register", "/products", "/products/**",
-                                "/css/**", "/js/**", "/media/**", "/h2-console/**", "/error").permitAll()
+                        .requestMatchers("/media/**", "/error", "/h2-console/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/register", "/api/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/", "/api/products/", "/api/products/**",
                                 "/api/products/*/comments/").permitAll()
-                        .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
-                        .requestMatchers("/publish", "/profile").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/products/*/appoint", "/products/*/favorite",
-                                "/products/*/comment", "/appointments/*/action").authenticated()
-                        .anyRequest().permitAll()
+                        .anyRequest().denyAll()
                 )
                 .headers(h -> h.frameOptions(f -> f.sameOrigin()))
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> {
-                            String uri = req.getRequestURI();
-                            if (uri != null && uri.startsWith("/api/")) {
-                                writeJson(res, 401, "未认证");
-                            } else {
-                                res.sendRedirect("/login");
-                            }
-                        })
-                        .accessDeniedHandler((req, res, e) -> {
-                            String uri = req.getRequestURI();
-                            if (uri != null && uri.startsWith("/api/")) {
-                                writeJson(res, 403, "无权操作");
-                            } else {
-                                res.sendRedirect("/");
-                            }
-                        })
+                        .authenticationEntryPoint((req, res, e) -> writeJson(res, 401, "未认证"))
+                        .accessDeniedHandler((req, res, e) -> writeJson(res, 403, "无权操作"))
                 )
+                .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
@@ -86,7 +76,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        List<String> origins = appProperties.corsOriginList();
+        if (origins.isEmpty()) {
+            origins = List.of("http://localhost:5173");
+        }
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

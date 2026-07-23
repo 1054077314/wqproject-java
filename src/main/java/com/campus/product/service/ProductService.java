@@ -3,6 +3,7 @@ package com.campus.product.service;
 import com.campus.appointment.mapper.AppointmentMapper;
 import com.campus.category.mapper.CategoryMapper;
 import com.campus.comment.mapper.CommentMapper;
+import com.campus.comment.vo.CommentVo;
 import com.campus.common.BusinessException;
 import com.campus.common.PageResult;
 import com.campus.common.PageUtils;
@@ -15,6 +16,11 @@ import com.campus.product.entity.Product;
 import com.campus.product.entity.ProductImage;
 import com.campus.product.mapper.ProductImageMapper;
 import com.campus.product.mapper.ProductMapper;
+import com.campus.product.vo.MyProductVo;
+import com.campus.product.vo.ProductDetailVo;
+import com.campus.product.vo.ProductImageVo;
+import com.campus.product.vo.ProductListItemVo;
+import com.campus.product.vo.ProductPayloadVo;
 import com.campus.security.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
@@ -23,7 +29,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,47 +62,49 @@ public class ProductService {
         this.appProperties = appProperties;
     }
 
-    public PageResult<Map<String, Object>> listActive(HttpServletRequest request, Long categoryId, String search) {
+    public PageResult<ProductListItemVo> listActive(HttpServletRequest request, Long categoryId, String search) {
         return PageUtils.paginate(request, appProperties.getPageSize(), () ->
                 productMapper.findActive(categoryId, search).stream().map(this::toListItem).collect(Collectors.toList()));
     }
 
-    public Map<String, Object> detail(Long id, UserPrincipal principal) {
+    public ProductDetailVo detail(Long id, UserPrincipal principal) {
         Product product = requireProduct(id);
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", product.getId());
-        data.put("title", product.getTitle());
-        data.put("description", product.getDescription());
-        data.put("price", product.getPrice());
-        data.put("images", productImageMapper.findByProductId(id).stream().map(this::toImageView).collect(Collectors.toList()));
-        data.put("category_name", product.getCategoryName());
-        data.put("contact_info", product.getContactInfo());
-        data.put("status", product.getStatus());
-        data.put("created_at", product.getCreatedAt());
-        data.put("seller_username", product.getSellerUsername());
-        data.put("comments", commentMapper.findByProductId(id).stream().map(c -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", c.getId());
-            m.put("content", c.getContent());
-            m.put("username", c.getUsername());
-            m.put("created_at", c.getCreatedAt());
-            return m;
-        }).collect(Collectors.toList()));
-        data.put("appointment_count", appointmentMapper.countByProduct(id));
-        boolean favorited = false;
-        boolean appointed = false;
-        if (principal != null) {
-            favorited = favoriteMapper.exists(principal.getId(), id);
-            appointed = appointmentMapper.exists(principal.getId(), id);
+        boolean ownerOrAdmin = principal != null
+                && (principal.getId().equals(product.getSellerId()) || principal.isStaff());
+        boolean publicVisible = "active".equals(product.getStatus()) || "sold".equals(product.getStatus());
+        if (!publicVisible && !ownerOrAdmin) {
+            throw new BusinessException(404, "商品不存在");
         }
-        data.put("is_favorited", favorited);
-        data.put("is_appointed", appointed);
-        data.put("seller_id", product.getSellerId());
-        return data;
+        ProductDetailVo vo = new ProductDetailVo();
+        vo.setId(product.getId());
+        vo.setTitle(product.getTitle());
+        vo.setDescription(product.getDescription());
+        vo.setPrice(product.getPrice());
+        vo.setImages(productImageMapper.findByProductId(id).stream().map(this::toImageVo).collect(Collectors.toList()));
+        vo.setCategoryName(product.getCategoryName());
+        vo.setContactInfo(product.getContactInfo());
+        vo.setStatus(product.getStatus());
+        vo.setCreatedAt(product.getCreatedAt());
+        vo.setSellerUsername(product.getSellerUsername());
+        vo.setSellerId(product.getSellerId());
+        vo.setComments(commentMapper.findByProductId(id).stream().map(c -> {
+            CommentVo cv = new CommentVo();
+            cv.setId(c.getId());
+            cv.setContent(c.getContent());
+            cv.setUsername(c.getUsername());
+            cv.setCreatedAt(c.getCreatedAt());
+            return cv;
+        }).collect(Collectors.toList()));
+        vo.setAppointmentCount(appointmentMapper.countByProduct(id));
+        if (principal != null) {
+            vo.setFavorited(favoriteMapper.exists(principal.getId(), id));
+            vo.setAppointed(appointmentMapper.exists(principal.getId(), id));
+        }
+        return vo;
     }
 
     @Transactional
-    public Map<String, Object> create(ProductCreateRequest request, List<MultipartFile> files, UserPrincipal principal) {
+    public ProductPayloadVo create(ProductCreateRequest request, List<MultipartFile> files, UserPrincipal principal) {
         if (categoryMapper.findById(request.getCategory()) == null) {
             throw new BusinessException(400, "分类不存在");
         }
@@ -114,13 +126,16 @@ public class ProductService {
     }
 
     @Transactional
-    public Map<String, Object> update(Long id, ProductUpdateRequest request, List<MultipartFile> files, UserPrincipal principal) {
+    public ProductPayloadVo update(Long id, ProductUpdateRequest request, List<MultipartFile> files, UserPrincipal principal) {
         Product product = requireProduct(id);
         if (!product.getSellerId().equals(principal.getId())) {
             throw new BusinessException(403, "无权操作此商品");
         }
         if ("active".equals(product.getStatus())) {
             throw new BusinessException(400, "已上架商品需先下架再编辑");
+        }
+        if ("sold".equals(product.getStatus())) {
+            throw new BusinessException(400, "已售出商品不可编辑");
         }
         if (request.getTitle() != null) {
             String title = request.getTitle().trim();
@@ -166,6 +181,7 @@ public class ProductService {
         for (ProductImage img : productImageMapper.findByProductId(id)) {
             if (!keepIds.contains(img.getId())) {
                 productImageMapper.softDelete(img.getId());
+                fileStorageService.deleteQuietly(img.getImage());
             }
         }
         saveImages(id, files, request.getUploadedImages());
@@ -178,36 +194,50 @@ public class ProductService {
         if (!product.getSellerId().equals(principal.getId())) {
             throw new BusinessException(403, "无权操作此商品");
         }
-        if (appointmentMapper.countByProduct(id) > 0) {
-            throw new BusinessException(400, "需先取消所有预约");
+        if (appointmentMapper.countPendingByProduct(id) > 0) {
+            throw new BusinessException(400, "需先处理完待确认预约");
         }
-        productMapper.updateStatus(id, "offline", product.getRejectReason());
+        if (productMapper.casStatus(id, "active", "offline", product.getRejectReason()) == 0) {
+            throw new BusinessException(409, "仅在售商品可下架，或状态已变更");
+        }
     }
 
-    public PageResult<Map<String, Object>> myProducts(HttpServletRequest request, String status, UserPrincipal principal) {
-        return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                productMapper.findBySeller(principal.getId(), status).stream().map(p -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id", p.getId());
-                    m.put("title", p.getTitle());
-                    m.put("price", p.getPrice());
-                    m.put("status", p.getStatus());
-                    m.put("images", productImageMapper.findByProductId(p.getId()).stream().map(this::toImageView).collect(Collectors.toList()));
-                    m.put("category_name", p.getCategoryName());
-                    m.put("appointment_count", p.getAppointmentCount() == null ? 0 : p.getAppointmentCount());
-                    m.put("created_at", p.getCreatedAt());
-                    return m;
-                }).collect(Collectors.toList()));
+    public PageResult<MyProductVo> myProducts(HttpServletRequest request, String status, UserPrincipal principal) {
+        return PageUtils.paginate(request, appProperties.getPageSize(), () -> {
+            List<Product> products = productMapper.findBySeller(principal.getId(), status);
+            Map<Long, List<ProductImage>> imagesByProduct = loadImagesGrouped(
+                    products.stream().map(Product::getId).collect(Collectors.toList()));
+            return products.stream().map(p -> {
+                MyProductVo vo = new MyProductVo();
+                vo.setId(p.getId());
+                vo.setTitle(p.getTitle());
+                vo.setPrice(p.getPrice());
+                vo.setStatus(p.getStatus());
+                List<ProductImage> images = imagesByProduct.getOrDefault(p.getId(), List.of());
+                vo.setImages(images.stream().map(this::toImageVo).collect(Collectors.toList()));
+                vo.setCategoryName(p.getCategoryName());
+                vo.setAppointmentCount(p.getAppointmentCount() == null ? 0 : p.getAppointmentCount());
+                vo.setCreatedAt(p.getCreatedAt());
+                return vo;
+            }).collect(Collectors.toList());
+        });
+    }
+
+    private Map<Long, List<ProductImage>> loadImagesGrouped(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Map.of();
+        }
+        return productImageMapper.findByProductIds(productIds).stream()
+                .collect(Collectors.groupingBy(ProductImage::getProductId, LinkedHashMap::new, Collectors.toList()));
     }
 
     @Transactional
     public void review(Long id, ProductReviewRequest request) {
         Product product = requireProduct(id);
-        if (!"pending".equals(product.getStatus())) {
-            throw new BusinessException(400, "只能审核待审核商品");
-        }
         if ("approve".equals(request.getAction())) {
-            productMapper.updateStatus(id, "active", "");
+            if (productMapper.casStatus(id, "pending", "active", "") == 0) {
+                throw new BusinessException(409, "只能审核待审核商品，或状态已变更");
+            }
             return;
         }
         if ("reject".equals(request.getAction())) {
@@ -215,13 +245,15 @@ public class ProductService {
             if (reason.isEmpty()) {
                 throw new BusinessException(400, "驳回原因不能为空");
             }
-            productMapper.updateStatus(id, "rejected", reason);
+            if (productMapper.casStatus(id, "pending", "rejected", reason) == 0) {
+                throw new BusinessException(409, "只能审核待审核商品，或状态已变更");
+            }
             return;
         }
         throw new BusinessException(400, "无效操作");
     }
 
-    public PageResult<Map<String, Object>> pendingList(HttpServletRequest request) {
+    public PageResult<ProductListItemVo> pendingList(HttpServletRequest request) {
         return PageUtils.paginate(request, appProperties.getPageSize(), () ->
                 productMapper.findPending().stream().map(this::toListItem).collect(Collectors.toList()));
     }
@@ -268,37 +300,37 @@ public class ProductService {
         return product;
     }
 
-    private Map<String, Object> toListItem(Product p) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", p.getId());
-        m.put("title", p.getTitle());
-        m.put("price", p.getPrice());
-        m.put("first_image", fileStorageService.toUrl(p.getFirstImage()));
-        m.put("category_name", p.getCategoryName());
-        return m;
+    private ProductListItemVo toListItem(Product p) {
+        ProductListItemVo vo = new ProductListItemVo();
+        vo.setId(p.getId());
+        vo.setTitle(p.getTitle());
+        vo.setPrice(p.getPrice());
+        vo.setFirstImage(fileStorageService.toUrl(p.getFirstImage()));
+        vo.setCategoryName(p.getCategoryName());
+        return vo;
     }
 
-    private Map<String, Object> toImageView(ProductImage img) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", img.getId());
-        m.put("image", fileStorageService.toUrl(img.getImage()));
-        m.put("created_at", img.getCreatedAt());
-        return m;
+    private ProductImageVo toImageVo(ProductImage img) {
+        ProductImageVo vo = new ProductImageVo();
+        vo.setId(img.getId());
+        vo.setImage(fileStorageService.toUrl(img.getImage()));
+        vo.setCreatedAt(img.getCreatedAt());
+        return vo;
     }
 
-    private Map<String, Object> toProductPayload(Long id) {
+    private ProductPayloadVo toProductPayload(Long id) {
         Product product = requireProduct(id);
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", product.getId());
-        m.put("title", product.getTitle());
-        m.put("description", product.getDescription());
-        m.put("price", product.getPrice());
-        m.put("category", product.getCategoryId());
-        m.put("seller", product.getSellerId());
-        m.put("contact_info", product.getContactInfo());
-        m.put("status", product.getStatus());
-        m.put("created_at", product.getCreatedAt());
-        m.put("images", productImageMapper.findByProductId(id).stream().map(this::toImageView).collect(Collectors.toList()));
-        return m;
+        ProductPayloadVo vo = new ProductPayloadVo();
+        vo.setId(product.getId());
+        vo.setTitle(product.getTitle());
+        vo.setDescription(product.getDescription());
+        vo.setPrice(product.getPrice());
+        vo.setCategory(product.getCategoryId());
+        vo.setSeller(product.getSellerId());
+        vo.setContactInfo(product.getContactInfo());
+        vo.setStatus(product.getStatus());
+        vo.setCreatedAt(product.getCreatedAt());
+        vo.setImages(productImageMapper.findByProductId(id).stream().map(this::toImageVo).collect(Collectors.toList()));
+        return vo;
     }
 }

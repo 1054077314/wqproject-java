@@ -169,7 +169,7 @@ export default function ProductDetail() {
             </div>
 
             <div className="flex gap-3">
-              {!(product.seller_username === user?.username || user?.is_staff) && (
+              {!(product.seller_username === user?.username || user?.is_staff) && product.status === 'active' && (
                 <button
                   onClick={handleAppointment}
                   disabled={apptLoading || product.is_appointed}
@@ -178,7 +178,12 @@ export default function ProductDetail() {
                   {apptLoading ? '请稍候...' : product.is_appointed ? '已预约 · 等待卖家确认' : '立即发起预约面交'}
                 </button>
               )}
-              {product.seller_username !== user?.username && (
+              {product.status === 'sold' && (
+                <div className="flex-1 bg-primary-subtle text-neutral-600 font-bold text-xs py-3 rounded-xl text-center">
+                  已售出
+                </div>
+              )}
+              {product.seller_username !== user?.username && product.status === 'active' && (
                 <button
                   onClick={handleFavorite}
                   disabled={favLoading}

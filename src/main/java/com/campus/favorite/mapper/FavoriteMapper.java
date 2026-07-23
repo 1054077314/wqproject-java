@@ -34,6 +34,8 @@ public interface FavoriteMapper {
             FROM favorites f
             JOIN products p ON p.id = f.product_id
             WHERE f.user_id = #{userId}
+              AND p.is_deleted = FALSE
+              AND p.status = 'active'
             ORDER BY f.created_at DESC
             """)
     List<Favorite> findByUser(Long userId);

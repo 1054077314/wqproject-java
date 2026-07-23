@@ -80,7 +80,7 @@ class ProductApiTest {
 
         mockMvc.perform(get("/api/products/"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.results").isArray());
+                .andExpect(jsonPath("$.data.results").isArray());
 
         mockMvc.perform(post("/api/admin/products/" + productId + "/review/")
                         .header("Authorization", "Bearer " + adminToken)

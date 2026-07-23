@@ -31,16 +31,17 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        String key = extractToken(request);
-        if (key != null && !key.isEmpty()) {
-            Token token = tokenMapper.findByKey(key);
+        String raw = extractToken(request);
+        if (raw != null && !raw.isEmpty()) {
+            String hashed = TokenHasher.hash(raw);
+            Token token = tokenMapper.findByKey(hashed);
             if (token == null) {
                 if (isApi(request)) {
                     writeUnauthorized(response, "token 无效");
                     return;
                 }
             } else if (token.isExpired()) {
-                tokenMapper.deleteByKey(key);
+                tokenMapper.deleteByKey(hashed);
                 if (isApi(request)) {
                     writeUnauthorized(response, "token 已过期");
                     return;
@@ -53,7 +54,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                         return;
                     }
                 } else {
-                    UserPrincipal principal = new UserPrincipal(user, key);
+                    // Store hashed key so logout can delete the DB row.
+                    UserPrincipal principal = new UserPrincipal(user, hashed);
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(auth);
@@ -67,13 +69,6 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             return header.substring(7).trim();
-        }
-        if (request.getCookies() != null) {
-            for (var cookie : request.getCookies()) {
-                if ("token".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
         }
         return null;
     }

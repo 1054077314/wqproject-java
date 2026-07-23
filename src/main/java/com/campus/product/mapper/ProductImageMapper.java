@@ -11,6 +11,19 @@ public interface ProductImageMapper {
     @Select("SELECT id, product_id, image, is_deleted AS deleted, created_at, updated_at FROM product_images WHERE product_id = #{productId} AND is_deleted = FALSE ORDER BY id ASC")
     List<ProductImage> findByProductId(Long productId);
 
+    @Select({
+            "<script>",
+            "SELECT id, product_id, image, is_deleted AS deleted, created_at, updated_at",
+            "FROM product_images",
+            "WHERE is_deleted = FALSE AND product_id IN",
+            "<foreach collection='productIds' item='id' open='(' separator=',' close=')'>",
+            "#{id}",
+            "</foreach>",
+            "ORDER BY id ASC",
+            "</script>"
+    })
+    List<ProductImage> findByProductIds(@Param("productIds") List<Long> productIds);
+
     @Insert("INSERT INTO product_images (product_id, image, is_deleted, created_at, updated_at) VALUES (#{productId}, #{image}, #{deleted}, #{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(ProductImage image);

@@ -22,8 +22,9 @@
 - 商品详情（图片轮播、评论列表）
 - 发布商品（多图上传、分类选择）
 - 收藏 / 取消收藏（Toggle 设计）
-- 预约看货（买家申请 → 卖家确认/拒绝）
+- 预约看货（买家申请/取消 → 卖家确认即成交售出 / 拒绝；取消或拒绝后可再次预约）
 - 个人中心（我的商品、我的收藏、我的预约）
+- 登录/注册按 IP 限流（可配置）
 
 **管理员后台：**
 - 数据统计看板（Chart.js 图表）
@@ -35,7 +36,7 @@
 
 ```
 campus-share/
-├── pom.xml                         # Maven / Spring Boot 工程
+├── pom.xml                         # Maven / Spring Boot API
 ├── src/
 │   ├── main/
 │   │   ├── java/com/campus/
@@ -48,18 +49,16 @@ campus-share/
 │   │   │   ├── comment/            # 评论模块
 │   │   │   ├── common/             # 统一响应、异常、分页
 │   │   │   ├── config/             # Security、MVC、AppProperties
-│   │   │   ├── security/           # Token 过滤器
-│   │   │   └── web/                # Thymeleaf 页面控制器（可选）
+│   │   │   └── security/           # Token 过滤器
 │   │   └── resources/
 │   │       ├── application.yml     # 主配置（端口 8085，默认 mysql）
 │   │       ├── application-mysql.yml
 │   │       ├── application-h2.yml
-│   │       ├── db/migration/       # Flyway 建表 V1
+│   │       ├── db/migration/       # Flyway 建表 V1 + 索引 V3
 │   │       ├── db/data/            # Flyway 初始化数据 V2
-│   │       ├── mapper/             # MyBatis XML
-│   │       ├── static/ / templates/
+│   │       └── mapper/             # MyBatis XML
 │   └── test/                       # API 测试
-├── frontend/                       # React SPA
+├── frontend/                       # React SPA（唯一前端）
 │   ├── src/
 │   │   ├── view/                   # 页面（home/login/products/profile/admin）
 │   │   ├── components/             # 公共组件（ProtectedRoute、Layout）
@@ -142,6 +141,7 @@ mvn -DskipTests package   # 输出 target/campus-share-1.0.0.jar
 基础地址：`/api/`  
 认证方式：Bearer Token（Header `Authorization: Bearer <token>`）  
 统一响应格式：`{"code": 200, "message": "success", "data": ...}`
+分页接口的 `data` 为：`{"count": N, "next": "...", "previous": "...", "results": [...]}`
 
 ### 用户
 
@@ -180,8 +180,8 @@ mvn -DskipTests package   # 输出 target/campus-share-1.0.0.jar
 
 | 方法 | 路径 | 认证 | 说明 |
 |------|------|------|------|
-| POST | `/api/appointments/` | 需要 | 预约看货 |
-| PATCH | `/api/appointments/{id}/` | 需要（仅卖家） | 确认/拒绝预约 |
+| POST | `/api/appointments/` | 需要 | 预约看货（取消/拒绝后可重开） |
+| PATCH | `/api/appointments/{id}/` | 需要 | 卖家 `confirm`（成交→sold）/`reject`；买家 `cancel`（仅 pending） |
 | GET | `/api/my-appointments/as-buyer/` | 需要 | 我作为买家的预约 |
 | GET | `/api/my-appointments/as-seller/` | 需要 | 我作为卖家的预约 |
 
@@ -226,7 +226,7 @@ users (用户)
 │   └── id, user_id(FK), product_id(FK), created_at
 │
 ├── appointments (预约)      ← unique(buyer, product)
-│   └── id, buyer_id(FK), product_id(FK), status, created_at, updated_at
+│   └── id, buyer_id(FK), product_id(FK), status(pending/confirmed/rejected/cancelled), created_at, updated_at
 │
 └── comments (评论)
     └── id, user_id(FK), product_id(FK), content, created_at
@@ -238,8 +238,12 @@ categories (分类)
 **关键设计：**
 - 商品表 `products` 有 `(status, created_at)` 复合索引，优化列表查询
 - 商品、商品图片支持软删除（`is_deleted` 标记，不物理删除）
-- 收藏和预约均有唯一约束，防止重复操作
-- 商品状态流转：`pending`（待审核）→ `active`（在售）/ `rejected`（驳回）→ `offline`（下架）
+- 收藏和预约均有唯一约束，防止重复操作；预约取消/拒绝后可重开同一商品
+- 商品状态流转：`pending` → `active` → `sold`（确认预约成交）/ `offline`（下架）；审核可 `rejected`
+- 预约状态：`pending` → `confirmed`（同时商品 sold、其余 pending 自动 rejected）/ `rejected` / `cancelled`；`confirmed` 后不可取消
+- 写操作使用 CAS（`UPDATE … WHERE status=期望值`），冲突返回 409
+- 登录/注册接口按 IP 限流（`app.rate-limit-login-per-minute` / `app.rate-limit-register-per-minute`）
+- 图片软删时同步清理磁盘文件；收藏列表仅展示在售商品
 
 ## 生产部署
 

@@ -21,7 +21,7 @@ export default function PublishProduct() {
 
   useEffect(() => {
     request.get('/categories/').then((res: any) => {
-      const nextCategories = Array.isArray(res) ? res : res.data
+      const nextCategories = Array.isArray(res?.data) ? res.data : []
       setCategories(Array.isArray(nextCategories) ? nextCategories : [])
     }).catch(() => {})
   }, [])

@@ -16,7 +16,7 @@ export default function ProductReview() {
     setLoading(true)
     try {
       const res: PaginatedRes<ProductListItem> = await request.get('/admin/pending-products/')
-      setProducts(res.results)
+      setProducts(res.data?.results ?? [])
     } catch {
       // ignore
     } finally {

@@ -6,12 +6,16 @@ export interface ApiRes<T = unknown> {
   data: T
 }
 
-export interface PaginatedRes<T> {
+/** Pagination payload under ApiRes.data */
+export interface PageData<T> {
   count: number
   next: string | null
   previous: string | null
   results: T[]
 }
+
+export type PaginatedRes<T> = ApiRes<PageData<T>>
+
 
 export interface User {
   id: number

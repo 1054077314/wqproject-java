@@ -16,8 +16,7 @@ export default function CategoryManage() {
     setLoading(true)
     try {
       const res: ApiRes<Category[]> = await request.get('/categories/')
-      const data = Array.isArray(res) ? res : res.data
-      setCategories(Array.isArray(data) ? data : [])
+      setCategories(Array.isArray(res.data) ? res.data : [])
     } catch {
       // ignore
     } finally {

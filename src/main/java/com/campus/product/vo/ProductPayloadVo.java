@@ -1,34 +1,30 @@
-package com.campus.product.dto;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Size;
+package com.campus.product.vo;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
-public class ProductUpdateRequest {
+public class ProductPayloadVo {
 
-    @Size(max = 100, message = "标题最多 100 字")
+    private Long id;
     private String title;
-
-    @Size(max = 2000, message = "描述最多 2000 字")
     private String description;
-
-    @DecimalMin(value = "0.01", message = "价格必须为正数")
     private BigDecimal price;
-
     private Long category;
-
-    @Size(max = 100, message = "联系方式最多 100 字")
-    @JsonProperty("contact_info")
+    private Long seller;
     private String contactInfo;
+    private String status;
+    private LocalDateTime createdAt;
+    private List<ProductImageVo> images = new ArrayList<>();
 
-    @JsonProperty("uploaded_images")
-    private List<String> uploadedImages;
+    public Long getId() {
+        return id;
+    }
 
-    @JsonProperty("keep_image_ids")
-    private String keepImageIds;
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getTitle() {
         return title;
@@ -62,6 +58,14 @@ public class ProductUpdateRequest {
         this.category = category;
     }
 
+    public Long getSeller() {
+        return seller;
+    }
+
+    public void setSeller(Long seller) {
+        this.seller = seller;
+    }
+
     public String getContactInfo() {
         return contactInfo;
     }
@@ -70,19 +74,27 @@ public class ProductUpdateRequest {
         this.contactInfo = contactInfo;
     }
 
-    public List<String> getUploadedImages() {
-        return uploadedImages;
+    public String getStatus() {
+        return status;
     }
 
-    public void setUploadedImages(List<String> uploadedImages) {
-        this.uploadedImages = uploadedImages;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
-    public String getKeepImageIds() {
-        return keepImageIds;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    public void setKeepImageIds(String keepImageIds) {
-        this.keepImageIds = keepImageIds;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public List<ProductImageVo> getImages() {
+        return images;
+    }
+
+    public void setImages(List<ProductImageVo> images) {
+        this.images = images;
     }
 }

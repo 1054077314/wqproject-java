@@ -2,6 +2,7 @@ package com.campus.comment.service;
 
 import com.campus.comment.entity.Comment;
 import com.campus.comment.mapper.CommentMapper;
+import com.campus.comment.vo.CommentVo;
 import com.campus.common.BusinessException;
 import com.campus.common.PageResult;
 import com.campus.common.PageUtils;
@@ -13,8 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,7 +30,7 @@ public class CommentService {
     }
 
     @Transactional
-    public Map<String, Object> create(Long productId, String content, UserPrincipal principal) {
+    public CommentVo create(Long productId, String content, UserPrincipal principal) {
         if (productMapper.findById(productId) == null) {
             throw new BusinessException(404, "商品不存在");
         }
@@ -44,23 +43,23 @@ public class CommentService {
         comment.setContent(content.trim());
         comment.setCreatedAt(LocalDateTime.now());
         commentMapper.insert(comment);
-        return toView(commentMapper.findById(comment.getId()));
+        return toVo(commentMapper.findById(comment.getId()));
     }
 
-    public PageResult<Map<String, Object>> listByProduct(HttpServletRequest request, Long productId) {
+    public PageResult<CommentVo> listByProduct(HttpServletRequest request, Long productId) {
         if (productMapper.findById(productId) == null) {
             throw new BusinessException(404, "商品不存在");
         }
         return PageUtils.paginate(request, appProperties.getPageSize(), () ->
-                commentMapper.findByProductId(productId).stream().map(this::toView).collect(Collectors.toList()));
+                commentMapper.findByProductId(productId).stream().map(this::toVo).collect(Collectors.toList()));
     }
 
-    private Map<String, Object> toView(Comment c) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", c.getId());
-        m.put("content", c.getContent());
-        m.put("username", c.getUsername());
-        m.put("created_at", c.getCreatedAt());
-        return m;
+    private CommentVo toVo(Comment c) {
+        CommentVo vo = new CommentVo();
+        vo.setId(c.getId());
+        vo.setContent(c.getContent());
+        vo.setUsername(c.getUsername());
+        vo.setCreatedAt(c.getCreatedAt());
+        return vo;
     }
 }

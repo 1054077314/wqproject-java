@@ -31,9 +31,9 @@ export default function ProductList() {
       if (categoryId) params.category_id = categoryId
       if (searchQuery) params.search = searchQuery
       const res: PaginatedRes<ProductListItem> = await request.get('/products/', { params })
-      const nextProducts = Array.isArray(res.results) ? res.results : []
+      const nextProducts = Array.isArray(res.data?.results) ? res.data.results : []
       setProducts(nextProducts)
-      setTotal(typeof res.count === 'number' ? res.count : nextProducts.length)
+      setTotal(typeof res.data?.count === 'number' ? res.data.count : nextProducts.length)
     } catch {
       setProducts([])
       setTotal(0)
@@ -48,7 +48,7 @@ export default function ProductList() {
 
   useEffect(() => {
     request.get('/categories/').then((res: any) => {
-      const nextCategories = Array.isArray(res) ? res : res.data
+      const nextCategories = Array.isArray(res?.data) ? res.data : []
       setCategories(Array.isArray(nextCategories) ? nextCategories : [])
     }).catch(() => {})
   }, [])

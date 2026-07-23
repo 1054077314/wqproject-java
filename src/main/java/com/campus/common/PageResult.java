@@ -3,7 +3,7 @@ package com.campus.common;
 import java.util.List;
 
 /**
- * DRF PageNumberPagination compatible envelope.
+ * Pagination payload nested under ApiResponse.data.
  */
 public class PageResult<T> {
 
